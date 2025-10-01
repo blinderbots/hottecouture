@@ -7,6 +7,7 @@ A modern, production-ready web application built with Next.js 14+, TypeScript, a
 - **Next.js 14+** with App Router and Server Components
 - **TypeScript** with strict configuration
 - **Tailwind CSS** for styling with custom design system
+- **Supabase** for authentication and database
 - **ESLint + Prettier** for code quality and formatting
 - **Vitest + Testing Library** for unit and integration testing
 - **Playwright** for end-to-end testing
@@ -21,6 +22,7 @@ A modern, production-ready web application built with Next.js 14+, TypeScript, a
 - **Framework**: Next.js 14+ (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
+- **Database & Auth**: Supabase
 - **Testing**: Vitest, Testing Library, Playwright
 - **Linting**: ESLint + Prettier
 - **CI/CD**: GitHub Actions
@@ -44,7 +46,24 @@ npm install
 cp env.example .env.local
 ```
 
-4. Update the environment variables in `.env.local` with your values.
+4. Update the environment variables in `.env.local` with your values:
+   - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+   - `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (server-only)
+
+## 🔐 Supabase Setup
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to Settings > API to get your project URL and keys
+3. Copy the values to your `.env.local` file
+4. Enable email authentication in Authentication > Settings
+5. Configure your site URL in Authentication > URL Configuration
+
+### Authentication Features
+- Email OTP sign-in (magic links)
+- Server-side session management
+- Protected routes with middleware
+- User role management (owner, seamstress, custom, clerk)
 
 ## 🚀 Development
 
@@ -144,6 +163,11 @@ npm run build
 ```
 src/
 ├── app/                    # Next.js App Router
+│   ├── auth/              # Authentication pages
+│   │   ├── sign-in/       # Sign-in page
+│   │   ├── callback/      # Auth callback
+│   │   └── sign-out/      # Sign-out route
+│   ├── dashboard/         # Protected dashboard
 │   ├── globals.css        # Global styles
 │   ├── layout.tsx         # Root layout
 │   ├── page.tsx           # Home page
@@ -152,6 +176,12 @@ src/
 ├── components/            # Reusable components
 │   └── ui/               # UI components
 ├── lib/                  # Utility functions
+│   ├── auth/             # Authentication utilities
+│   │   └── roles.ts      # User role definitions
+│   └── supabase/         # Supabase clients
+│       ├── client.ts     # Browser client
+│       └── server.ts     # Server client
+├── middleware.ts         # Auth middleware
 ├── styles/               # Additional styles
 └── test/                 # Test setup files
 
