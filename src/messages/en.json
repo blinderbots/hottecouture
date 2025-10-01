@@ -109,5 +109,19 @@
       "error": "Failed to update",
       "success": "Updated successfully"
     }
+  },
+  "receipt": {
+    "title": "Receipt",
+    "order": "Order",
+    "date": "Date",
+    "client": "Client",
+    "phone": "Phone",
+    "email": "Email",
+    "items": "Items",
+    "subtotal": "Subtotal",
+    "rushFee": "Rush Fee",
+    "tax": "Tax",
+    "total": "Total",
+    "thankYou": "Thank you for your order!"
   }
 }

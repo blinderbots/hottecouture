@@ -10,6 +10,7 @@ import {
 import { intakeRequestSchema, IntakeRequest, IntakeResponse } from '@/lib/dto'
 import { calculateOrderPricing, getPricingConfig } from '@/lib/pricing'
 import { generateQRCode } from '@/lib/utils/qr'
+import { generateReceiptPDF } from '@/lib/labels/pdf-generator'
 import { nanoid } from 'nanoid'
 
 async function handleIntake(request: NextRequest): Promise<IntakeResponse> {
@@ -209,7 +210,53 @@ async function handleIntake(request: NextRequest): Promise<IntakeResponse> {
       garmentCount: garments.length 
     })
 
-    // 9. Return response
+    // 9. Generate receipt PDF
+    try {
+      const receiptData = {
+        orderNumber,
+        clientName: `${client.first_name} ${client.last_name}`,
+        clientEmail: client.email,
+        clientPhone: client.phone,
+        garments: garments.map(garment => ({
+          type: garment.type,
+          services: garment.services.map(service => ({
+            name: service.serviceId, // This would need to be resolved to service name
+            quantity: service.qty,
+            price: service.customPriceCents || 0, // This would need service base price
+          })),
+        })),
+        totals: {
+          subtotal_cents: calculation.subtotal_cents,
+          rush_fee_cents: calculation.rush_fee_cents,
+          tax_cents: calculation.tax_cents,
+          total_cents: calculation.total_cents,
+        },
+        rush: order.rush,
+        createdAt: new Date().toISOString(),
+        language: client.language || 'en',
+      }
+
+      const receiptResult = await generateReceiptPDF(receiptData)
+      
+      // Store receipt path in order
+      await supabase
+        .from('order')
+        .update({ receipt_path: receiptResult.pdfPath })
+        .eq('id', orderId)
+
+      await logEvent('order', orderId, 'receipt_generated', { 
+        correlationId,
+        receiptPath: receiptResult.pdfPath 
+      })
+    } catch (receiptError) {
+      console.warn('Failed to generate receipt:', receiptError)
+      await logEvent('order', orderId, 'receipt_generation_failed', { 
+        correlationId,
+        error: receiptError instanceof Error ? receiptError.message : 'Unknown error' 
+      })
+    }
+
+    // 10. Return response
     const response: IntakeResponse = {
       orderId,
       orderNumber,

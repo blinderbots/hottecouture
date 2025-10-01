@@ -109,5 +109,19 @@
       "error": "Échec de mise à jour",
       "success": "Mis à jour avec succès"
     }
+  },
+  "receipt": {
+    "title": "Reçu",
+    "order": "Commande",
+    "date": "Date",
+    "client": "Client",
+    "phone": "Téléphone",
+    "email": "Email",
+    "items": "Articles",
+    "subtotal": "Sous-total",
+    "rushFee": "Frais d'urgence",
+    "tax": "Taxe",
+    "total": "Total",
+    "thankYou": "Merci pour votre commande!"
   }
 }
