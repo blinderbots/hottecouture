@@ -70,5 +70,44 @@
       "saveFailed": "Failed to save data",
       "submitFailed": "Failed to submit order"
     }
+  },
+  "board": {
+    "title": "Order Board",
+    "columns": {
+      "pending": "Pending",
+      "working": "Working",
+      "done": "Done",
+      "ready": "Ready",
+      "delivered": "Delivered"
+    },
+    "filters": {
+      "rush": "Rush Orders",
+      "dueToday": "Due Today",
+      "assignee": "Assignee",
+      "pipeline": "Pipeline",
+      "search": "Search Orders",
+      "all": "All Orders"
+    },
+    "card": {
+      "orderNumber": "Order #",
+      "garmentTypes": "Garments",
+      "servicesCount": "Services",
+      "dueDate": "Due Date",
+      "assignee": "Assignee",
+      "rush": "RUSH",
+      "rackPosition": "Rack",
+      "noAssignee": "Unassigned"
+    },
+    "actions": {
+      "assignToMe": "Assign to Me",
+      "unassign": "Unassign",
+      "viewDetails": "View Details",
+      "updateStage": "Update Stage"
+    },
+    "status": {
+      "updating": "Updating...",
+      "error": "Failed to update",
+      "success": "Updated successfully"
+    }
   }
 }

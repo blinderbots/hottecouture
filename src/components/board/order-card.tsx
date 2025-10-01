@@ -1,0 +1,149 @@
+'use client'
+
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { useTranslations } from 'next-intl'
+import { format, parseISO, isAfter, isToday } from 'date-fns'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { BoardOrder } from '@/lib/board/types'
+
+interface OrderCardProps {
+  order: BoardOrder
+  isUpdating?: boolean
+  isDragging?: boolean
+}
+
+export function OrderCard({ order, isUpdating = false, isDragging = false }: OrderCardProps) {
+  const t = useTranslations('board.card')
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSortableDragging,
+  } = useSortable({
+    id: order.id,
+    disabled: isUpdating,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isSortableDragging ? 0.5 : 1,
+  }
+
+  const isOverdue = order.due_date && isAfter(new Date(), parseISO(order.due_date))
+  const isDueToday = order.due_date && isToday(parseISO(order.due_date))
+
+  const garmentTypes = order.garments.map(g => g.type).join(', ')
+  const assignees = Array.from(new Set(order.tasks.map(t => t.assignee).filter(Boolean)))
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`cursor-grab active:cursor-grabbing transition-all ${
+        isUpdating ? 'opacity-50' : ''
+      } ${isDragging ? 'shadow-lg scale-105' : 'hover:shadow-md'}`}
+    >
+      <CardContent className="p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-2">
+            <h4 className="font-semibold text-lg">
+              #{order.order_number}
+            </h4>
+            {order.rush && (
+              <span className="px-2 py-1 text-xs font-bold text-white bg-red-500 rounded">
+                {t('rush')}
+              </span>
+            )}
+          </div>
+          {order.rack_position && (
+            <span className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded">
+              {t('rackPosition')}: {order.rack_position}
+            </span>
+          )}
+        </div>
+
+        {/* Client */}
+        <div className="mb-2">
+          <p className="text-sm font-medium text-gray-900">
+            {order.client.first_name} {order.client.last_name}
+          </p>
+        </div>
+
+        {/* Garments */}
+        <div className="mb-2">
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">{t('garmentTypes')}:</span> {garmentTypes}
+          </p>
+        </div>
+
+        {/* Services count */}
+        <div className="mb-2">
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">{t('servicesCount')}:</span> {order.services_count}
+          </p>
+        </div>
+
+        {/* Due date */}
+        {order.due_date && (
+          <div className="mb-2">
+            <p className={`text-sm ${
+              isOverdue ? 'text-red-600 font-medium' : 
+              isDueToday ? 'text-orange-600 font-medium' : 
+              'text-gray-600'
+            }`}>
+              <span className="font-medium">{t('dueDate')}:</span> {format(parseISO(order.due_date), 'MMM dd, yyyy')}
+              {isOverdue && ' (Overdue)'}
+              {isDueToday && ' (Today)'}
+            </p>
+          </div>
+        )}
+
+        {/* Assignees */}
+        {assignees.length > 0 && (
+          <div className="mb-3">
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">{t('assignee')}:</span> {assignees.join(', ')}
+            </p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 text-xs"
+            disabled={isUpdating}
+          >
+            {t('actions.viewDetails')}
+          </Button>
+          {assignees.length === 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs"
+              disabled={isUpdating}
+            >
+              {t('actions.assignToMe')}
+            </Button>
+          )}
+        </div>
+
+        {/* Loading indicator */}
+        {isUpdating && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+            <div className="text-sm text-gray-600">Updating...</div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

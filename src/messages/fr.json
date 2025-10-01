@@ -70,5 +70,44 @@
       "saveFailed": "Échec de sauvegarde des données",
       "submitFailed": "Échec de soumission de la commande"
     }
+  },
+  "board": {
+    "title": "Tableau de Commande",
+    "columns": {
+      "pending": "En Attente",
+      "working": "En Cours",
+      "done": "Terminé",
+      "ready": "Prêt",
+      "delivered": "Livré"
+    },
+    "filters": {
+      "rush": "Commandes Urgentes",
+      "dueToday": "Échéance Aujourd'hui",
+      "assignee": "Assigné à",
+      "pipeline": "Pipeline",
+      "search": "Rechercher Commandes",
+      "all": "Toutes les Commandes"
+    },
+    "card": {
+      "orderNumber": "Commande #",
+      "garmentTypes": "Vêtements",
+      "servicesCount": "Services",
+      "dueDate": "Date d'Échéance",
+      "assignee": "Assigné à",
+      "rush": "URGENT",
+      "rackPosition": "Étagère",
+      "noAssignee": "Non Assigné"
+    },
+    "actions": {
+      "assignToMe": "M'Assigner",
+      "unassign": "Désassigner",
+      "viewDetails": "Voir Détails",
+      "updateStage": "Mettre à Jour"
+    },
+    "status": {
+      "updating": "Mise à jour...",
+      "error": "Échec de mise à jour",
+      "success": "Mis à jour avec succès"
+    }
   }
 }
