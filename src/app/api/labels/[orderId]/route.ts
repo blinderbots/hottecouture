@@ -68,6 +68,7 @@ export async function POST(
       })),
       rush: order.rush,
       createdAt: order.created_at,
+      language: 'fr', // Default to French, could be made configurable
     }
 
     // Generate label sheet PDF

@@ -34,6 +34,12 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // i18n configuration
+  i18n: {
+    locales: ['fr', 'en'],
+    defaultLocale: 'fr',
+    localeDetection: true,
+  },
 }
 
 module.exports = withNextIntl(nextConfig)

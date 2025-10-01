@@ -1,4 +1,5 @@
 import { format } from 'date-fns'
+import { fr, enUS } from 'date-fns/locale'
 
 export interface LabelData {
   orderNumber: number
@@ -12,6 +13,7 @@ export interface LabelData {
   }>
   rush: boolean
   createdAt: string
+  language: 'fr' | 'en'
 }
 
 export interface LabelSheetOptions {
@@ -21,6 +23,23 @@ export interface LabelSheetOptions {
   labelWidth: number
   labelHeight: number
   margin: number
+}
+
+// Localized strings
+const getLocalizedStrings = (language: 'fr' | 'en') => {
+  const strings = {
+    fr: {
+      orderNumber: 'Commande #',
+      garmentCode: 'Code',
+      rush: 'URGENT',
+    },
+    en: {
+      orderNumber: 'Order #',
+      garmentCode: 'Code',
+      rush: 'RUSH',
+    },
+  }
+  return strings[language]
 }
 
 /**
@@ -72,7 +91,7 @@ export function generateLabelSheetHTML(
         
         if (labelIndex < totalLabels) {
           const garment = garments[labelIndex]
-          html += generateSingleLabelHTML(garment, orderNumber, clientInitials, rush, createdAt)
+          html += generateSingleLabelHTML(garment, orderNumber, clientInitials, rush, createdAt, data.language)
         } else {
           html += `                <div class="label empty"></div>\n`
         }
@@ -100,21 +119,24 @@ function generateSingleLabelHTML(
   orderNumber: number,
   clientInitials: string,
   rush: boolean,
-  createdAt: string
+  createdAt: string,
+  language: 'fr' | 'en'
 ): string {
-  const createdDate = format(new Date(createdAt), 'MMM dd, yyyy')
+  const strings = getLocalizedStrings(language)
+  const locale = language === 'fr' ? fr : enUS
+  const createdDate = format(new Date(createdAt), 'MMM dd, yyyy', { locale })
   
   return `
                 <div class="label">
-                    ${rush ? '<div class="rush-stripe"></div>' : ''}
+                    ${rush ? `<div class="rush-stripe">${strings.rush}</div>` : ''}
                     <div class="label-content">
                         <div class="label-header">
                             <div class="client-initials">${clientInitials}</div>
-                            <div class="order-number">#${orderNumber}</div>
+                            <div class="order-number">${strings.orderNumber}${orderNumber}</div>
                         </div>
                         <div class="garment-info">
                             <div class="garment-type">${garment.type}</div>
-                            <div class="garment-code">${garment.labelCode}</div>
+                            <div class="garment-code">${strings.garmentCode}: ${garment.labelCode}</div>
                         </div>
                         <div class="qr-code">
                             <img src="${garment.qrCode}" alt="QR Code" />

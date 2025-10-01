@@ -127,6 +127,7 @@ export async function generateLabelSheetPDF(
       })),
       rush: orderData.rush,
       createdAt: orderData.createdAt,
+      language: orderData.language || 'en',
     }
 
     // Generate HTML template
@@ -277,13 +278,47 @@ function generateReceiptHTML(orderData: any): string {
     return new Date(dateString).toLocaleDateString(isFrench ? 'fr-CA' : 'en-US')
   }
 
+  // Localized strings
+  const strings = {
+    fr: {
+      title: 'Reçu',
+      order: 'Commande',
+      date: 'Date',
+      client: 'Client',
+      phone: 'Téléphone',
+      email: 'Email',
+      items: 'Articles',
+      subtotal: 'Sous-total',
+      rushFee: 'Frais d\'urgence',
+      tax: 'Taxe',
+      total: 'Total',
+      thankYou: 'Merci pour votre commande!',
+    },
+    en: {
+      title: 'Receipt',
+      order: 'Order',
+      date: 'Date',
+      client: 'Client',
+      phone: 'Phone',
+      email: 'Email',
+      items: 'Items',
+      subtotal: 'Subtotal',
+      rushFee: 'Rush Fee',
+      tax: 'Tax',
+      total: 'Total',
+      thankYou: 'Thank you for your order!',
+    },
+  }
+
+  const t = strings[orderData.language || 'en']
+
   return `
 <!DOCTYPE html>
 <html lang="${orderData.language}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${isFrench ? 'Reçu' : 'Receipt'} - Order #${orderData.orderNumber}</title>
+    <title>${t.title} - ${t.order} #${orderData.orderNumber}</title>
     <style>
         ${getReceiptCSS()}
     </style>
@@ -292,19 +327,19 @@ function generateReceiptHTML(orderData: any): string {
     <div class="receipt">
         <div class="header">
             <h1>Hotte Couture</h1>
-            <h2>${isFrench ? 'Reçu' : 'Receipt'}</h2>
+            <h2>${t.title}</h2>
         </div>
         
         <div class="order-info">
-            <p><strong>${isFrench ? 'Commande' : 'Order'} #${orderData.orderNumber}</p>
-            <p>${isFrench ? 'Date' : 'Date'}: ${formatDate(orderData.createdAt)}</p>
-            <p>${isFrench ? 'Client' : 'Client'}: ${orderData.clientName}</p>
-            ${orderData.clientEmail ? `<p>Email: ${orderData.clientEmail}</p>` : ''}
-            ${orderData.clientPhone ? `<p>${isFrench ? 'Téléphone' : 'Phone'}: ${orderData.clientPhone}</p>` : ''}
+            <p><strong>${t.order} #${orderData.orderNumber}</p>
+            <p>${t.date}: ${formatDate(orderData.createdAt)}</p>
+            <p>${t.client}: ${orderData.clientName}</p>
+            ${orderData.clientEmail ? `<p>${t.email}: ${orderData.clientEmail}</p>` : ''}
+            ${orderData.clientPhone ? `<p>${t.phone}: ${orderData.clientPhone}</p>` : ''}
         </div>
 
         <div class="items">
-            <h3>${isFrench ? 'Articles' : 'Items'}</h3>
+            <h3>${t.items}</h3>
             ${orderData.garments.map((garment: any) => `
                 <div class="garment">
                     <h4>${garment.type}</h4>
@@ -321,27 +356,27 @@ function generateReceiptHTML(orderData: any): string {
 
         <div class="totals">
             <div class="total-line">
-                <span>${isFrench ? 'Sous-total' : 'Subtotal'}:</span>
+                <span>${t.subtotal}:</span>
                 <span>${formatCurrency(orderData.totals.subtotal_cents)}</span>
             </div>
             ${orderData.rush && orderData.totals.rush_fee_cents > 0 ? `
                 <div class="total-line">
-                    <span>${isFrench ? 'Frais d\'urgence' : 'Rush Fee'}:</span>
+                    <span>${t.rushFee}:</span>
                     <span>${formatCurrency(orderData.totals.rush_fee_cents)}</span>
                 </div>
             ` : ''}
             <div class="total-line">
-                <span>${isFrench ? 'Taxe' : 'Tax'}:</span>
+                <span>${t.tax}:</span>
                 <span>${formatCurrency(orderData.totals.tax_cents)}</span>
             </div>
             <div class="total-line total">
-                <span>${isFrench ? 'Total' : 'Total'}:</span>
+                <span>${t.total}:</span>
                 <span>${formatCurrency(orderData.totals.total_cents)}</span>
             </div>
         </div>
 
         <div class="footer">
-            <p>${isFrench ? 'Merci pour votre commande!' : 'Thank you for your order!'}</p>
+            <p>${t.thankYou}</p>
         </div>
     </div>
 </body>
