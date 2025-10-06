@@ -30,10 +30,6 @@ export function MeasurementVisualization({
     ? measurements.points.filter(p => p.category === selectedCategory)
     : measurements.points
 
-  const displayedPoints = showAll 
-    ? filteredPoints 
-    : filteredPoints.filter(p => p.value !== undefined)
-
   const formatValue = (point: MeasurementPoint) => {
     if (point.value === undefined) return 'Not measured'
     return `${point.value.toFixed(1)} ${point.unit}`
