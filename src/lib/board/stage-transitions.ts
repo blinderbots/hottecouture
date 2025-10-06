@@ -7,7 +7,7 @@ export interface StageTransition {
   fromStage: TaskStage
   toStage: TaskStage
   isValid: boolean
-  orderStatusUpdate?: OrderStatus
+  orderStatusUpdate?: OrderStatus | undefined
 }
 
 export interface TaskWithStage {
@@ -122,7 +122,7 @@ export function calculateStageTransition(
     fromStage,
     toStage: newStage,
     isValid,
-    orderStatusUpdate,
+    orderStatusUpdate: orderStatusUpdate ?? undefined,
   }
 }
 

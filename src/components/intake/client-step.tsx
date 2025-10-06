@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { ClientCreate } from '@/lib/dto'
+import { upsertGHLContact, formatClientForGHL } from '@/lib/webhooks/ghl-webhook'
 
 interface ClientStepProps {
   data: ClientCreate | null
@@ -14,7 +14,6 @@ interface ClientStepProps {
 }
 
 export function ClientStep({ data, onUpdate, onNext }: ClientStepProps) {
-  const t = useTranslations('intake.client')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<ClientCreate[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -24,371 +23,337 @@ export function ClientStep({ data, onUpdate, onNext }: ClientStepProps) {
     last_name: '',
     phone: '',
     email: '',
-    language: 'fr',
-    newsletter_consent: false,
-    preferred_contact: 'email',
-    notes: '',
+    language: 'fr'
   })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Partial<ClientCreate>>({})
+  const [isCreating, setIsCreating] = useState(false)
 
   const supabase = createClient()
 
   useEffect(() => {
-    if (data) {
-      setFormData(data)
-    }
-  }, [data])
-
-  const searchClients = async (query: string) => {
-    if (!query.trim()) {
+    if (searchQuery.length >= 2) {
+      searchClients()
+    } else {
       setSearchResults([])
-      return
     }
+  }, [searchQuery])
 
+  const searchClients = async () => {
     setIsSearching(true)
     try {
-      const { data: clients, error } = await supabase
-        .from('client')
-        .select('*')
-        .or(`phone.ilike.%${query}%,email.ilike.%${query}%`)
-        .limit(10)
+        const { data: clients, error } = await supabase
+          .from('client')
+          .select('id, first_name, last_name, phone, email, language')
+          .or(`phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
+          .limit(10)
 
       if (error) {
-        console.error('Search error:', error)
-        return
+        console.error('Error searching clients:', error)
+        setSearchResults([])
+      } else {
+        setSearchResults(clients || [])
       }
-
-      setSearchResults(clients || [])
-    } catch (error) {
-      console.error('Search error:', error)
+    } catch (err) {
+      console.error('Error searching clients:', err)
+      setSearchResults([])
     } finally {
       setIsSearching(false)
     }
   }
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault()
-    searchClients(searchQuery)
+    
+    const newErrors: Partial<ClientCreate> = {}
+    
+    if (!formData.first_name.trim()) {
+      newErrors.first_name = 'First name is required'
+    }
+    
+    if (!formData.last_name.trim()) {
+      newErrors.last_name = 'Last name is required'
+    }
+    
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email format'
+    }
+    
+    setErrors(newErrors)
+    
+    if (Object.keys(newErrors).length === 0) {
+      setIsCreating(true)
+      try {
+        const { data: newClient, error } = await (supabase as any)
+          .from('client')
+          .insert([{
+            first_name: formData.first_name.trim(),
+            last_name: formData.last_name.trim(),
+            phone: formData.phone?.trim() || null,
+            email: formData.email?.trim() || null,
+            language: formData.language
+          }])
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Error creating client:', error)
+          setErrors({ first_name: 'Failed to create client. Please try again.' })
+          return
+        }
+
+        // Send new client to GHL webhook
+        let ghlContactId = null
+        try {
+          const ghlContactData = formatClientForGHL({
+            first_name: formData.first_name.trim(),
+            last_name: formData.last_name.trim(),
+            email: formData.email?.trim() || '',
+            phone: formData.phone?.trim() || ''
+          })
+          
+          const ghlResult = await upsertGHLContact(ghlContactData)
+          if (ghlResult.success) {
+            ghlContactId = ghlResult.contactId
+            console.log('✅ GHL contact created successfully for client:', newClient.id, 'Contact ID:', ghlContactId)
+          } else {
+            console.warn('⚠️ GHL webhook failed (non-blocking):', ghlResult.error)
+          }
+        } catch (ghlError) {
+          console.warn('⚠️ GHL webhook error (non-blocking):', ghlError)
+          // Don't fail the client creation if GHL webhook fails
+        }
+
+        // Update client with GHL contact ID if we got one
+        if (ghlContactId) {
+          try {
+            await (supabase as any)
+              .from('client')
+              .update({ ghl_contact_id: ghlContactId })
+              .eq('id', newClient.id)
+            console.log('✅ Updated client with GHL contact ID:', ghlContactId)
+          } catch (updateError) {
+            console.warn('⚠️ Failed to update client with GHL contact ID (non-blocking):', updateError)
+          }
+        }
+
+        onUpdate(newClient)
+        setShowCreateForm(false)
+        setFormData({
+          first_name: '',
+          last_name: '',
+          phone: '',
+          email: '',
+          language: 'fr'
+        })
+        setErrors({})
+      } catch (err) {
+        console.error('Error creating client:', err)
+        setErrors({ first_name: 'Failed to create client. Please try again.' })
+      } finally {
+        setIsCreating(false)
+      }
+    }
   }
 
-  const selectClient = (client: ClientCreate) => {
-    setFormData(client)
+  const handleSelectClient = (client: ClientCreate) => {
     onUpdate(client)
     setSearchQuery('')
     setSearchResults([])
-    setShowCreateForm(false)
-  }
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.first_name.trim()) {
-      newErrors.first_name = t('errors.required')
-    }
-
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = t('errors.required')
-    }
-
-    if (!formData.phone && !formData.email) {
-      newErrors.contact = 'Phone or email is required'
-    }
-
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = t('errors.invalidEmail')
-    }
-
-    if (formData.phone && !/^\+?[\d\s\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = t('errors.invalidPhone')
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (validateForm()) {
-      onUpdate(formData)
-      onNext()
-    }
-  }
-
-  const handleInputChange = (field: keyof ClientCreate, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search existing clients */}
-      {!showCreateForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('search')}</CardTitle>
-            <CardDescription>
-              Search for existing clients by phone or email
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('searchPlaceholder')}
-                  className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-              <Button
-                type="submit"
-                disabled={isSearching || !searchQuery.trim()}
-                className="w-full py-3 text-lg"
-              >
-                {isSearching ? 'Searching...' : 'Search'}
-              </Button>
-            </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Client Information</CardTitle>
+        <CardDescription>
+          Search for an existing client or create a new one
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {!data ? (
+          <>
+            <div>
+              <label htmlFor="search" className="block text-sm font-medium mb-2">
+                Search Client
+              </label>
+              <input
+                id="search"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter phone number or email"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-            {/* Search results */}
+            {isSearching && (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Searching...</p>
+              </div>
+            )}
+
             {searchResults.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <h3 className="font-medium">Search Results:</h3>
+              <div className="space-y-2">
+                <h3 className="font-medium">Search Results</h3>
                 {searchResults.map((client, index) => (
                   <div
-                    key={index}
-                    onClick={() => selectClient(client)}
-                    className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+                    key={client.first_name + client.last_name + index}
+                    className="p-3 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleSelectClient(client)}
                   >
-                    <p className="font-medium">
+                    <div className="font-medium">
                       {client.first_name} {client.last_name}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {client.phone && `Phone: ${client.phone}`}
-                      {client.phone && client.email && ' • '}
-                      {client.email && `Email: ${client.email}`}
-                    </p>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {client.phone} • {client.email}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {searchResults.length === 0 && searchQuery && !isSearching && (
-              <div className="mt-4 text-center">
-                <p className="text-gray-600 mb-4">{t('notFound')}</p>
-                <Button
-                  onClick={() => setShowCreateForm(true)}
-                  className="w-full py-3 text-lg"
-                >
-                  {t('createNew')}
-                </Button>
-              </div>
-            )}
+            {!showCreateForm ? (
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateForm(true)}
+                className="w-full"
+              >
+                Create New Client
+              </Button>
+            ) : (
+              <form onSubmit={handleCreateClient} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-medium mb-1">
+                      First Name *
+                    </label>
+                    <input
+                      id="firstName"
+                      type="text"
+                      value={formData.first_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        errors.first_name ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.first_name && (
+                      <p className="text-red-500 text-sm mt-1">{errors.first_name}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium mb-1">
+                      Last Name *
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      value={formData.last_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        errors.last_name ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.last_name && (
+                      <p className="text-red-500 text-sm mt-1">{errors.last_name}</p>
+                    )}
+                  </div>
+                </div>
 
-            {!searchQuery && (
-              <div className="mt-4 text-center">
-                <Button
-                  onClick={() => setShowCreateForm(true)}
-                  className="w-full py-3 text-lg"
-                >
-                  {t('createNew')}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Create new client form */}
-      {showCreateForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('createNew')}</CardTitle>
-            <CardDescription>
-              Enter client information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t('firstName')} *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.first_name}
-                    onChange={(e) => handleInputChange('first_name', e.target.value)}
-                    className={`w-full px-4 py-3 text-lg border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-                      errors.first_name ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.first_name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
-                  )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium mb-1">
+                      Phone
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium mb-1">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        errors.email ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.email && (
+                      <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                    )}
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t('lastName')} *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.last_name}
-                    onChange={(e) => handleInputChange('last_name', e.target.value)}
-                    className={`w-full px-4 py-3 text-lg border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-                      errors.last_name ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.last_name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t('phone')}
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone || ''}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className={`w-full px-4 py-3 text-lg border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-                      errors.phone ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.phone && (
-                    <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t('email')}
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email || ''}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className={`w-full px-4 py-3 text-lg border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-                      errors.email ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t('language')}
+                  <label htmlFor="language" className="block text-sm font-medium mb-1">
+                    Language
                   </label>
                   <select
+                    id="language"
                     value={formData.language}
-                    onChange={(e) => handleInputChange('language', e.target.value)}
-                    className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    onChange={(e) => setFormData(prev => ({ ...prev, language: e.target.value as 'fr' | 'en' }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="fr">Français</option>
                     <option value="en">English</option>
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t('preferredContact')}
-                  </label>
-                  <select
-                    value={formData.preferred_contact}
-                    onChange={(e) => handleInputChange('preferred_contact', e.target.value)}
-                    className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                <div className="flex gap-3">
+                  <Button type="submit" className="flex-1" disabled={isCreating}>
+                    {isCreating ? 'Creating...' : 'Create Client'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateForm(false)}
+                    className="flex-1"
+                    disabled={isCreating}
                   >
-                    <option value="email">Email</option>
-                    <option value="sms">SMS</option>
-                  </select>
+                    Cancel
+                  </Button>
                 </div>
-
-                <div className="flex items-center">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.newsletter_consent}
-                      onChange={(e) => handleInputChange('newsletter_consent', e.target.checked)}
-                      className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
-                    />
-                    <span className="text-sm font-medium">{t('newsletterConsent')}</span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  {t('notes')}
-                </label>
-                <textarea
-                  value={formData.notes || ''}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-
-              {errors.contact && (
-                <p className="text-sm text-red-600">{errors.contact}</p>
-              )}
-
-              <div className="flex space-x-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowCreateForm(false)}
-                  className="flex-1 py-3 text-lg"
-                >
-                  Back to Search
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 py-3 text-lg"
-                >
-                  Continue
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Selected client summary */}
-      {data && !showCreateForm && (
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="pt-6">
+              </form>
+            )}
+          </>
+        ) : (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-md">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium text-green-800">
                   {data.first_name} {data.last_name}
                 </h3>
                 <p className="text-sm text-green-600">
-                  {data.phone && `Phone: ${data.phone}`}
-                  {data.phone && data.email && ' • '}
-                  {data.email && `Email: ${data.email}`}
+                  {data.phone} • {data.email}
                 </p>
               </div>
               <Button
-                onClick={() => setShowCreateForm(true)}
                 variant="outline"
                 size="sm"
+                onClick={() => setShowCreateForm(true)}
               >
-                Edit
+                Change
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          </div>
+        )}
+
+        {data && (
+          <div className="flex justify-end">
+            <Button onClick={onNext}>
+              Continue to Garments
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

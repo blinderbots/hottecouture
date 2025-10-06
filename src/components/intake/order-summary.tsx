@@ -1,10 +1,10 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+// import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { IntakeResponse } from '@/lib/dto'
-import { formatCurrency } from '@/lib/pricing'
+import { formatCurrency } from '@/lib/pricing/client'
 
 interface OrderSummaryProps {
   order: IntakeResponse | null
@@ -13,7 +13,7 @@ interface OrderSummaryProps {
 }
 
 export function OrderSummary({ order, onPrintLabels, onNewOrder }: OrderSummaryProps) {
-  const t = useTranslations('intake.submit')
+  // const t = useTranslations('intake.submit')
 
   if (!order) {
     return (
@@ -34,7 +34,7 @@ export function OrderSummary({ order, onPrintLabels, onNewOrder }: OrderSummaryP
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-green-800 mb-2">{t('success')}</h2>
+            <h2 className="text-2xl font-bold text-green-800 mb-2">Order Created Successfully!</h2>
             <p className="text-green-600">
               Order #{order.orderNumber} has been created successfully
             </p>
@@ -129,14 +129,14 @@ export function OrderSummary({ order, onPrintLabels, onNewOrder }: OrderSummaryP
           onClick={onPrintLabels}
           className="flex-1 py-3 text-lg"
         >
-          {t('printLabels')}
+          Print Labels
         </Button>
         <Button
           onClick={onNewOrder}
           variant="outline"
           className="flex-1 py-3 text-lg"
         >
-          {t('viewOrder')}
+          New Order
         </Button>
       </div>
 

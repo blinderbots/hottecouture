@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+// import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { BoardFilters as BoardFiltersType, BoardOrder } from '@/lib/board/types'
@@ -13,7 +13,7 @@ interface BoardFiltersProps {
 }
 
 export function BoardFilters({ filters, onFiltersChange, orders }: BoardFiltersProps) {
-  const t = useTranslations('board.filters')
+  // const t = useTranslations('board.filters')
   const [isExpanded, setIsExpanded] = useState(false)
 
   // Get unique assignees from orders
@@ -36,8 +36,6 @@ export function BoardFilters({ filters, onFiltersChange, orders }: BoardFiltersP
     onFiltersChange({
       rush: false,
       dueToday: false,
-      assignee: undefined,
-      pipeline: undefined,
       search: '',
     })
   }
@@ -88,7 +86,7 @@ export function BoardFilters({ filters, onFiltersChange, orders }: BoardFiltersP
             size="sm"
             onClick={() => handleFilterChange('rush', !filters.rush)}
           >
-            {t('rush')} ({orders.filter(o => o.rush).length})
+            Rush ({orders.filter(o => o.rush).length})
           </Button>
           
           <Button
@@ -96,7 +94,7 @@ export function BoardFilters({ filters, onFiltersChange, orders }: BoardFiltersP
             size="sm"
             onClick={() => handleFilterChange('dueToday', !filters.dueToday)}
           >
-            {t('dueToday')} ({orders.filter(o => o.due_date && new Date(o.due_date).toDateString() === new Date().toDateString()).length})
+            Due Today ({orders.filter(o => o.due_date && new Date(o.due_date).toDateString() === new Date().toDateString()).length})
           </Button>
           
           <Button
@@ -120,7 +118,7 @@ export function BoardFilters({ filters, onFiltersChange, orders }: BoardFiltersP
         <div className="mb-4">
           <input
             type="text"
-            placeholder={t('search')}
+            placeholder="Search orders..."
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -133,7 +131,7 @@ export function BoardFilters({ filters, onFiltersChange, orders }: BoardFiltersP
             {/* Assignee filter */}
             <div>
               <label className="block text-sm font-medium mb-2">
-                {t('assignee')}
+                Assignee
               </label>
               <select
                 value={filters.assignee || ''}
@@ -152,7 +150,7 @@ export function BoardFilters({ filters, onFiltersChange, orders }: BoardFiltersP
             {/* Pipeline filter */}
             <div>
               <label className="block text-sm font-medium mb-2">
-                {t('pipeline')}
+                Pipeline
               </label>
               <div className="flex space-x-4">
                 <label className="flex items-center">

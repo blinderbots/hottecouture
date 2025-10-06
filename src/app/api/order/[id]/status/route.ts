@@ -14,7 +14,7 @@ async function handleOrderStatus(
   { params }: { params: { id: string } }
 ): Promise<StatusResponse> {
   const correlationId = getCorrelationId(request)
-  const supabase = createClient()
+    const supabase = await createClient()
   
   // Parse and validate query parameters
   const { searchParams } = new URL(request.url)
@@ -60,7 +60,7 @@ async function handleOrderStatus(
   }
 
   // If phone verification failed, return not found
-  if (validatedQuery.phone && order.client.phone !== validatedQuery.phone) {
+  if (validatedQuery.phone && (order as any).client?.phone !== validatedQuery.phone) {
     throw new NotFoundError('Order', correlationId)
   }
 
@@ -72,21 +72,21 @@ async function handleOrderStatus(
   })
 
   const response: StatusResponse = {
-    orderId: order.id,
-    orderNumber: order.order_number,
-    status: order.status,
-    due_date: order.due_date,
+    orderId: (order as any).id,
+    orderNumber: (order as any).order_number,
+    status: (order as any).status,
+    due_date: (order as any).due_date,
     client: {
-      first_name: order.client.first_name,
-      last_name: order.client.last_name,
-      phone: order.client.phone,
+      first_name: (order as any).client?.first_name || 'Unknown',
+      last_name: (order as any).client?.last_name || 'Client',
+      phone: (order as any).client?.phone || null,
     },
-    garments: order.garments?.map(garment => ({
+    garments: (order as any).garments?.map((garment: any) => ({
       type: garment.type,
       color: garment.color,
       brand: garment.brand,
     })) || [],
-    last_updated: order.created_at,
+    last_updated: (order as any).created_at,
   }
 
   return response

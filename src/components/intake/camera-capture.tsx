@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import Webcam from 'react-webcam'
 
 interface CameraCaptureProps {
-  onCapture: (photoBlob: Blob) => void
+  onCapture: (imageDataUrl: string) => void
   onCancel: () => void
 }
 
@@ -20,18 +20,8 @@ export function CameraCapture({ onCapture, onCancel }: CameraCaptureProps) {
     const imageSrc = webcamRef.current.getScreenshot()
     
     if (imageSrc) {
-      // Convert data URL to blob
-      fetch(imageSrc)
-        .then(res => res.blob())
-        .then(blob => {
-          onCapture(blob)
-        })
-        .catch(error => {
-          console.error('Error capturing photo:', error)
-        })
-        .finally(() => {
-          setIsCapturing(false)
-        })
+      onCapture(imageSrc)
+      setIsCapturing(false)
     }
   }, [onCapture])
 

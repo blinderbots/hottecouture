@@ -9,9 +9,9 @@ export default async function AuthCallbackPage({
   const code = searchParams.code as string
   const redirectTo = searchParams.redirectTo as string || '/dashboard'
 
-  if (code) {
-    const supabase = createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (code) {
+      const supabase = await createClient()
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
       // Redirect to the intended page after successful authentication

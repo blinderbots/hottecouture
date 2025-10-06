@@ -56,7 +56,7 @@ export function generateLabelSheetHTML(
     margin: 5,
   }
 ): string {
-  const { orderNumber, clientName, clientInitials, garments, rush, createdAt } = data
+  const { orderNumber, clientInitials, garments, rush, createdAt } = data
   const { paperSize, labelsPerRow, labelsPerColumn, labelWidth, labelHeight, margin } = options
 
   // Calculate total labels needed
@@ -91,7 +91,9 @@ export function generateLabelSheetHTML(
         
         if (labelIndex < totalLabels) {
           const garment = garments[labelIndex]
-          html += generateSingleLabelHTML(garment, orderNumber, clientInitials, rush, createdAt, data.language)
+          if (garment) {
+            html += generateSingleLabelHTML(garment, orderNumber, clientInitials, rush, createdAt, data.language)
+          }
         } else {
           html += `                <div class="label empty"></div>\n`
         }
@@ -158,6 +160,10 @@ function getLabelSheetCSS(
   labelHeight: number,
   margin: number
 ): string {
+  // Suppress unused variable warnings - these are used in template literals
+  void labelsPerRow
+  void labelsPerColumn
+  
   const pageWidth = paperSize === 'A4' ? '210mm' : '8.5in'
   const pageHeight = paperSize === 'A4' ? '297mm' : '11in'
 
@@ -325,8 +331,11 @@ export function generateLabelSheetSVG(
     margin: 5,
   }
 ): string {
-  const { orderNumber, clientName, clientInitials, garments, rush, createdAt } = data
+  const { orderNumber, clientInitials, garments, rush, createdAt } = data
   const { paperSize, labelsPerRow, labelsPerColumn, labelWidth, labelHeight, margin } = options
+  
+  // Suppress unused variable warnings - these are used in template literals
+  void labelsPerColumn
 
   const pageWidth = paperSize === 'A4' ? 210 : 8.5 * 25.4 // Convert inches to mm
   const pageHeight = paperSize === 'A4' ? 297 : 11 * 25.4

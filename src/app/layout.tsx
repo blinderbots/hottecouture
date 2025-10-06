@@ -2,12 +2,21 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { NavigationProvider } from '@/components/navigation/navigation-provider'
+import { AuthProvider } from '@/components/auth/auth-provider'
+import { AuthButton } from '@/components/auth/auth-button'
 
 const inter = Inter({ 
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
 })
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
 
 export const metadata: Metadata = {
   title: {
@@ -63,58 +72,49 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <NavigationProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="container flex h-16 items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold">Hotte Couture</h1>
+        <AuthProvider>
+          <NavigationProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="container flex h-16 items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <h1 className="text-xl font-bold">Hotte Couture</h1>
+                  </div>
+                  <nav className="flex items-center space-x-6">
+                    <a
+                      href="/"
+                      className="text-sm font-medium transition-colors hover:text-primary"
+                    >
+                      Home
+                    </a>
+                    <AuthButton />
+                  </nav>
                 </div>
-                <nav className="flex items-center space-x-6">
-                  <a
-                    href="/"
-                    className="text-sm font-medium transition-colors hover:text-primary"
-                  >
-                    Home
-                  </a>
-                  <a
-                    href="/about"
-                    className="text-sm font-medium transition-colors hover:text-primary"
-                  >
-                    About
-                  </a>
-                  <a
-                    href="/contact"
-                    className="text-sm font-medium transition-colors hover:text-primary"
-                  >
-                    Contact
-                  </a>
-                </nav>
-              </div>
-            </header>
-            <main className="flex-1">{children}</main>
-            <footer className="border-t bg-background">
-              <div className="container py-6">
-                <div className="flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row md:py-0">
-                  <div className="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
-                    <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-                      Built with Next.js 14+ and Tailwind CSS. The source code is available on{' '}
-                      <a
-                        href="#"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-medium underline underline-offset-4"
-                      >
-                        GitHub
-                      </a>
-                      .
-                    </p>
+              </header>
+              <main className="flex-1">{children}</main>
+              <footer className="border-t bg-background">
+                <div className="container py-6">
+                  <div className="flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row md:py-0">
+                    <div className="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
+                      <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+                        Built with Next.js 14+ and Tailwind CSS. The source code is available on{' '}
+                        <a
+                          href="#"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium underline underline-offset-4"
+                        >
+                          GitHub
+                        </a>
+                        .
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </footer>
-          </div>
-        </NavigationProvider>
+              </footer>
+            </div>
+          </NavigationProvider>
+        </AuthProvider>
       </body>
     </html>
   )

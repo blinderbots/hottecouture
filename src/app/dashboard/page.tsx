@@ -6,7 +6,7 @@ import { RoleBasedNav } from '@/components/navigation/role-based-nav'
 import { getCurrentUser } from '@/lib/security/auth'
 
 export default async function DashboardPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   
   const {
     data: { user },

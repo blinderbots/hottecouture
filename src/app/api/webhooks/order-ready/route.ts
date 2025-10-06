@@ -5,17 +5,25 @@ import {
   getCorrelationId, 
   logEvent, 
   validateRequest,
-  requireAuth,
+  UnauthorizedError,
   NotFoundError
 } from '@/lib/api/error-handler'
 import { webhookOrderReadySchema, WebhookOrderReady, WebhookResponse } from '@/lib/dto'
 
 async function handleOrderReadyWebhook(request: NextRequest): Promise<WebhookResponse> {
   const correlationId = getCorrelationId(request)
-  const supabase = createClient()
+    const supabase = await createClient()
   
   // Validate authentication (webhook secret)
-  requireAuth(request)
+  const authHeader = request.headers.get('authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new UnauthorizedError('Missing or invalid webhook authorization')
+  }
+  
+  const webhookSecret = authHeader.substring(7)
+  if (webhookSecret !== process.env.WEBHOOK_SECRET) {
+    throw new UnauthorizedError('Invalid webhook secret')
+  }
   
   // Parse and validate request body
   const body = await request.json()
@@ -35,8 +43,8 @@ async function handleOrderReadyWebhook(request: NextRequest): Promise<WebhookRes
   }
 
   // Update order status to ready if not already
-  if (order.status !== 'ready') {
-    const { error: updateError } = await supabase
+  if ((order as any).status !== 'ready') {
+    const { error: updateError } = await (supabase as any)
       .from('order')
       .update({ status: 'ready' })
       .eq('id', orderId)
@@ -51,7 +59,7 @@ async function handleOrderReadyWebhook(request: NextRequest): Promise<WebhookRes
     correlationId,
     timestamp,
     metadata,
-    orderNumber: order.order_number,
+    orderNumber: (order as any).order_number,
   })
 
   // TODO: Implement actual n8n integration
@@ -62,7 +70,7 @@ async function handleOrderReadyWebhook(request: NextRequest): Promise<WebhookRes
 
   const response: WebhookResponse = {
     success: true,
-    message: `Order ${order.order_number} marked as ready`,
+    message: `Order ${(order as any).order_number} marked as ready`,
     correlationId,
   }
 

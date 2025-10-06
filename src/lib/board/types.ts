@@ -12,6 +12,7 @@ export interface BoardOrder {
   due_date?: string
   rush: boolean
   rack_position?: string
+  client_name: string
   client: {
     first_name: string
     last_name: string

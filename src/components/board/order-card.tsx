@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useTranslations } from 'next-intl'
+// import { useTranslations } from 'next-intl'
 import { format, parseISO, isAfter, isToday } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,10 +12,11 @@ interface OrderCardProps {
   order: BoardOrder
   isUpdating?: boolean
   isDragging?: boolean
+  onAssign?: (orderId: string) => void
 }
 
-export function OrderCard({ order, isUpdating = false, isDragging = false }: OrderCardProps) {
-  const t = useTranslations('board.card')
+export function OrderCard({ order, isUpdating = false, isDragging = false, onAssign }: OrderCardProps) {
+  // const t = useTranslations('board.card')
   const {
     attributes,
     listeners,
@@ -59,13 +60,13 @@ export function OrderCard({ order, isUpdating = false, isDragging = false }: Ord
             </h4>
             {order.rush && (
               <span className="px-2 py-1 text-xs font-bold text-white bg-red-500 rounded">
-                {t('rush')}
+                Rush
               </span>
             )}
           </div>
           {order.rack_position && (
             <span className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded">
-              {t('rackPosition')}: {order.rack_position}
+              Rack: {order.rack_position}
             </span>
           )}
         </div>
@@ -73,21 +74,21 @@ export function OrderCard({ order, isUpdating = false, isDragging = false }: Ord
         {/* Client */}
         <div className="mb-2">
           <p className="text-sm font-medium text-gray-900">
-            {order.client.first_name} {order.client.last_name}
+            {order.client_name || 'Unknown Client'}
           </p>
         </div>
 
         {/* Garments */}
         <div className="mb-2">
           <p className="text-sm text-gray-600">
-            <span className="font-medium">{t('garmentTypes')}:</span> {garmentTypes}
+            <span className="font-medium">Garments:</span> {garmentTypes}
           </p>
         </div>
 
         {/* Services count */}
         <div className="mb-2">
           <p className="text-sm text-gray-600">
-            <span className="font-medium">{t('servicesCount')}:</span> {order.services_count}
+            <span className="font-medium">Services:</span> {order.services_count}
           </p>
         </div>
 
@@ -99,7 +100,7 @@ export function OrderCard({ order, isUpdating = false, isDragging = false }: Ord
               isDueToday ? 'text-orange-600 font-medium' : 
               'text-gray-600'
             }`}>
-              <span className="font-medium">{t('dueDate')}:</span> {format(parseISO(order.due_date), 'MMM dd, yyyy')}
+              <span className="font-medium">Due:</span> {format(parseISO(order.due_date), 'MMM dd, yyyy')}
               {isOverdue && ' (Overdue)'}
               {isDueToday && ' (Today)'}
             </p>
@@ -110,7 +111,7 @@ export function OrderCard({ order, isUpdating = false, isDragging = false }: Ord
         {assignees.length > 0 && (
           <div className="mb-3">
             <p className="text-sm text-gray-600">
-              <span className="font-medium">{t('assignee')}:</span> {assignees.join(', ')}
+              <span className="font-medium">Assignee:</span> {assignees.join(', ')}
             </p>
           </div>
         )}
@@ -123,16 +124,17 @@ export function OrderCard({ order, isUpdating = false, isDragging = false }: Ord
             className="flex-1 text-xs"
             disabled={isUpdating}
           >
-            {t('actions.viewDetails')}
+            View Details
           </Button>
-          {assignees.length === 0 && (
+          {assignees.length === 0 && onAssign && (
             <Button
               size="sm"
               variant="outline"
               className="flex-1 text-xs"
               disabled={isUpdating}
+              onClick={() => onAssign(order.id)}
             >
-              {t('actions.assignToMe')}
+              Assign to Me
             </Button>
           )}
         </div>

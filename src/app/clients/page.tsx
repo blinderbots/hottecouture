@@ -1,0 +1,197 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Search, User, Phone, Mail, Package, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+
+interface Client {
+  id: string
+  first_name: string
+  last_name: string
+  phone?: string
+  email?: string
+  created_at: string
+  order_count?: number
+  total_value?: number
+}
+
+export default function ClientsPage() {
+  const [clients, setClients] = useState<Client[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Load all clients
+  useEffect(() => {
+    loadClients()
+  }, [])
+
+  const loadClients = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/clients')
+      if (response.ok) {
+        const data = await response.json()
+        setClients(data.clients || [])
+      } else {
+        throw new Error('Failed to load clients')
+      }
+    } catch (err) {
+      console.error('Error loading clients:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load clients')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  // Filter clients based on search
+  const filteredClients = clients.filter(client => {
+    if (searchTerm === '') return true
+    
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      client.first_name.toLowerCase().includes(searchLower) ||
+      client.last_name.toLowerCase().includes(searchLower) ||
+      client.phone?.toLowerCase().includes(searchLower) ||
+      client.email?.toLowerCase().includes(searchLower)
+    )
+  })
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">Loading clients...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="text-center">
+          <div className="text-red-500 text-lg mb-4">Error loading clients</div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Link href="/board">
+            <Button>Back to Board</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
+      <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-4">
+          <Link href="/board">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Board
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Client Directory
+            </h1>
+            <p className="text-gray-600">
+              Search and view order history for any client
+            </p>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search clients by name, phone, or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      {/* Clients List */}
+      <div className="space-y-4">
+        {filteredClients.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No clients found</h3>
+              <p className="text-gray-600">
+                {searchTerm 
+                  ? 'Try adjusting your search criteria.'
+                  : 'No clients have been added yet.'
+                }
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredClients.map((client) => (
+            <Card key={client.id} className="hover:shadow-lg transition-shadow duration-200">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1 mb-4 sm:mb-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-semibold text-gray-900">
+                        {client.first_name} {client.last_name}
+                      </h3>
+                      <Badge variant="outline">
+                        Client since {formatDate(client.created_at)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-1 text-sm text-gray-600">
+                      {client.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4" />
+                          <span>{client.phone}</span>
+                        </div>
+                      )}
+                      {client.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4" />
+                          <span>{client.email}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Link href={`/orders/history?clientId=${client.id}`}>
+                      <Button className="w-full sm:w-auto">
+                        <Package className="w-4 h-4 mr-2" />
+                        View Order History
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+      </div>
+    </div>
+  )
+}

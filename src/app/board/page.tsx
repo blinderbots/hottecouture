@@ -1,240 +1,206 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
-import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { BoardFilters } from '@/components/board/board-filters'
-import { BoardColumn } from '@/components/board/board-column'
-import { OrderCard } from '@/components/board/order-card'
-import { createClient } from '@/lib/supabase/client'
-import { calculateStageTransition } from '@/lib/board/stage-transitions'
-import { format, isToday, isAfter, parseISO } from 'date-fns'
-import { OrderWithTasks } from '@/lib/board/types'
-
-type TaskStage = 'pending' | 'working' | 'done' | 'ready' | 'delivered'
-
-interface BoardOrder {
-  id: string
-  order_number: number
-  type: 'alteration' | 'custom'
-  status: 'pending' | 'working' | 'done' | 'ready' | 'delivered' | 'archived'
-  due_date?: string
-  rush: boolean
-  rack_position?: string
-  client: {
-    first_name: string
-    last_name: string
-  }
-  garments: Array<{
-    type: string
-  }>
-  tasks: Array<{
-    id: string
-    stage: TaskStage
-    assignee?: string
-  }>
-  services_count: number
-}
-
-interface BoardFilters {
-  rush: boolean
-  dueToday: boolean
-  assignee?: string
-  pipeline?: 'alteration' | 'custom'
-  search: string
-}
-
-const COLUMNS: Array<{ id: TaskStage; title: string }> = [
-  { id: 'pending', title: 'Pending' },
-  { id: 'working', title: 'Working' },
-  { id: 'done', title: 'Done' },
-  { id: 'ready', title: 'Ready' },
-  { id: 'delivered', title: 'Delivered' },
-]
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { InteractiveBoard } from '@/components/board/interactive-board'
+import { PipelineFilter } from '@/components/board/pipeline-filter'
+import { OrderType } from '@/lib/types/database'
+import { useRealtimeOrders } from '@/lib/hooks/useRealtimeOrders'
+import { AuthGuard } from '@/components/auth/auth-guard'
 
 export default function BoardPage() {
-  const t = useTranslations('board')
-  const [orders, setOrders] = useState<BoardOrder[]>([])
+  console.log('🎯 Board page rendering...')
+  
+  const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filters, setFilters] = useState<BoardFilters>({
-    rush: false,
-    dueToday: false,
-    search: '',
-  })
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [updating, setUpdating] = useState<Set<string>>(new Set())
+  const [selectedPipeline, setSelectedPipeline] = useState<OrderType | 'all'>('all')
+  const [refreshKey] = useState(0)
+  const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set())
+  
+  // Real-time refresh trigger
+  const realtimeTrigger = useRealtimeOrders()
 
-  const supabase = createClient()
+  // Auto-refresh when real-time changes are detected
+  useEffect(() => {
+    if (realtimeTrigger > 0) {
+      console.log('🔄 Real-time change detected, refreshing orders...')
+      handleRefresh()
+    }
+  }, [realtimeTrigger])
 
-  const loadOrders = useCallback(async () => {
+  const handleRefresh = async () => {
+    setLoading(true)
     try {
-      setLoading(true)
-      setError(null)
-
-      const { data, error: fetchError } = await supabase
-        .from('order')
-        .select(`
-          id,
-          order_number,
-          type,
-          status,
-          due_date,
-          rush,
-          rack_position,
-          client:client_id (
-            first_name,
-            last_name
-          ),
-          garments (
-            type
-          ),
-          tasks (
-            id,
-            stage,
-            assignee
-          )
-        `)
-        .eq('status', 'working') // Only show active orders
-        .order('order_number', { ascending: false })
-
-      if (fetchError) {
-        throw fetchError
+      // Fetch with proper cache busting
+      const response = await fetch(`/api/orders?ts=${Date.now()}`, {
+        cache: 'no-store',
+        next: { revalidate: 0 }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setOrders(data.orders || [])
+        console.log('🔄 Manual refresh completed:', { count: data.orders?.length || 0, timestamp: data.timestamp })
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
-
-      // Transform data to include services count
-      const transformedOrders: BoardOrder[] = (data || []).map(order => ({
-        ...order,
-        client: order.client || { first_name: '', last_name: '' },
-        garments: order.garments || [],
-        tasks: order.tasks || [],
-        services_count: 0, // This would need to be calculated from garment_service
-      }))
-
-      setOrders(transformedOrders)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load orders')
+    } catch (error) {
+      console.error('Error refreshing orders:', error)
     } finally {
       setLoading(false)
     }
-  }, [supabase])
-
-  useEffect(() => {
-    loadOrders()
-
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('board-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'order',
-        },
-        () => {
-          loadOrders()
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'task',
-        },
-        () => {
-          loadOrders()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [loadOrders])
-
-  const filteredOrders = orders.filter(order => {
-    if (filters.rush && !order.rush) return false
-    if (filters.dueToday && order.due_date && !isToday(parseISO(order.due_date))) return false
-    if (filters.assignee) {
-      const hasAssignee = order.tasks.some(task => task.assignee === filters.assignee)
-      if (!hasAssignee) return false
-    }
-    if (filters.pipeline && order.type !== filters.pipeline) return false
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
-      const matchesOrderNumber = order.order_number.toString().includes(searchLower)
-      const matchesClientName = 
-        order.client.first_name.toLowerCase().includes(searchLower) ||
-        order.client.last_name.toLowerCase().includes(searchLower)
-      if (!matchesOrderNumber && !matchesClientName) return false
-    }
-    return true
-  })
-
-  const ordersByStage = COLUMNS.reduce((acc, column) => {
-    acc[column.id] = filteredOrders.filter(order => {
-      // Determine the stage based on task stages
-      const taskStages = order.tasks.map(task => task.stage)
-      if (taskStages.length === 0) return column.id === 'pending'
-      
-      // Use the most advanced stage as the order's stage
-      const stageOrder = ['pending', 'working', 'done', 'ready', 'delivered']
-      const maxStageIndex = Math.max(...taskStages.map(stage => stageOrder.indexOf(stage)))
-      const orderStage = stageOrder[maxStageIndex] as TaskStage
-      
-      return orderStage === column.id
-    })
-    return acc
-  }, {} as Record<TaskStage, BoardOrder[]>)
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
   }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
+  const handleForceReload = () => {
+    console.log('🔄 Force page reload triggered')
+    window.location.reload()
+  }
 
-    if (!over) return
-
-    const orderId = active.id as string
-    const newStage = over.id as TaskStage
-
-    // Find the order
-    const order = orders.find(o => o.id === orderId)
-    if (!order) return
-
-    // Check if the transition is valid
-    const orderWithTasks: OrderWithTasks = {
-      id: order.id,
-      status: order.status,
-      tasks: order.tasks.map(task => ({
-        id: task.id,
-        stage: task.stage,
-        order_id: order.id,
-      })),
+  useEffect(() => {
+    // Clear orders state first to ensure we start fresh
+    setOrders([])
+    setLoading(true)
+    setError(null)
+    
+    // Check if this is a refresh from order creation
+    const urlParams = new URLSearchParams(window.location.search)
+    const isRefresh = urlParams.get('refresh') === 'true'
+    
+    if (isRefresh) {
+      console.log('🔄 Board: Fresh refresh from order creation detected')
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+    
+    const fetchOrders = async () => {
+      try {
+        console.log('🔍 Fetching orders from Supabase...')
+        console.log('🔍 Board: Current orders state before fetch:', orders.length)
+        
+        // Fetch real orders from Supabase with proper cache busting
+        const url = `/api/orders?ts=${Date.now()}`
+        console.log('🔍 Board: Fetching from URL:', url)
+        
+        const response = await fetch(url, {
+          cache: 'no-store',
+          next: { revalidate: 0 }
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        console.log('📊 Orders result:', result)
+        console.log('📊 Orders count from API:', result.orders?.length || 0)
+        console.log('📊 API timestamp:', result.timestamp)
+        console.log('📊 API source:', result.source)
+        
+        console.log('📊 Board: Setting orders from API response:', result.orders?.length || 0)
+        console.log('📊 Board: API response details:', {
+          success: result.success,
+          count: result.count,
+          timestamp: result.timestamp,
+          source: result.source
+        })
+        
+        console.log('🔍 Board: About to set orders state with:', result.orders?.length || 0, 'orders')
+        console.log('🔍 Board: Raw orders data:', result.orders)
+        
+        // Force a fresh state update
+        setOrders([])
+        setTimeout(() => {
+          setOrders(result.orders || [])
+          setLoading(false)
+          console.log('🔍 Board: Orders state set, should now have:', result.orders?.length || 0, 'orders')
+        }, 100)
+      } catch (err) {
+        console.error('❌ Error fetching orders:', err)
+        setError(err instanceof Error ? err.message : 'Failed to fetch orders')
+        setLoading(false)
+      }
     }
 
+    fetchOrders()
+  }, [refreshKey])
+
+  // Track orders state changes
+  useEffect(() => {
+    console.log('🔍 Board: Orders state changed to:', orders.length, 'orders')
+    console.log('🔍 Board: First few orders:', orders.slice(0, 3))
+  }, [orders])
+
+  const handleOrderUpdate = async (orderId: string, newStatus: string) => {
+    console.log(`🔄 Updating order ${orderId} to status: ${newStatus}`)
+    
+    // Store original status for potential revert
+    const originalOrder = orders.find(o => o.id === orderId)
+    const originalStatus = originalOrder?.status || 'pending'
+    
+    // Mark order as updating
+    setUpdatingOrders(prev => new Set(prev).add(orderId))
+    
+    // OPTIMISTIC UPDATE: Immediately update the UI
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === orderId 
+          ? { ...order, status: newStatus }
+          : order
+      )
+    )
+    
     try {
-      setUpdating(prev => new Set(prev).add(orderId))
+      // Generate a correlation ID for this request
+      const correlationId = crypto.randomUUID()
+      
+      const response = await fetch(`/api/order/${orderId}/stage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Correlation-ID': correlationId,
+        },
+        body: JSON.stringify({ 
+          stage: newStatus,
+          correlationId: correlationId 
+        }),
+      })
 
-      // Update all tasks for this order to the new stage
-      const { error } = await supabase
-        .from('task')
-        .update({ stage: newStage })
-        .eq('garment_id', order.garments[0]?.id) // This is simplified - in reality you'd update all tasks
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('API Error:', errorText)
+        throw new Error(`Failed to update order: ${response.status} - ${errorText}`)
+      }
 
-      if (error) throw error
+      const result = await response.json()
+      console.log('API Response:', result)
 
-      // Reload orders to get updated data
-      await loadOrders()
+      // Update local state with server response (in case server made additional changes)
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, status: newStatus }
+            : order
+        )
+      )
+
+      console.log(`✅ Order ${orderId} updated to ${newStatus}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update order')
+      console.error('❌ Error updating order:', err)
+      
+      // REVERT OPTIMISTIC UPDATE: Restore the original status
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, status: originalStatus }
+            : order
+        )
+      )
+      
+      // You could add a toast notification here to inform the user
+      console.log(`🔄 Reverted order ${orderId} to original status due to API error`)
     } finally {
-      setUpdating(prev => {
+      // Remove order from updating set
+      setUpdatingOrders(prev => {
         const newSet = new Set(prev)
         newSet.delete(orderId)
         return newSet
@@ -242,77 +208,107 @@ export default function BoardPage() {
     }
   }
 
-  const handleDragOver = (event: DragOverEvent) => {
-    // Handle drag over logic if needed
-  }
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading board...</div>
+      <div className="p-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">Loading board...</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-red-600 text-lg mb-4">Error: {error}</div>
-          <button
-            onClick={loadOrders}
-            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-          >
-            Retry
-          </button>
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-red-800 mb-2">Error Loading Board</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Try Again
+          </Button>
         </div>
       </div>
     )
   }
 
+  // Filter orders by selected pipeline
+  const filteredOrders = selectedPipeline === 'all' 
+    ? orders 
+    : orders.filter(order => order.type === selectedPipeline)
+
+  console.log('📊 Board: Filtered orders count:', filteredOrders.length)
+  console.log('📊 Board: Selected pipeline:', selectedPipeline)
+  console.log('📊 Board: First few filtered orders:', filteredOrders.slice(0, 3))
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">{t('title')}</h1>
-          <p className="text-gray-600">
-            Drag and drop orders between stages to update their status
-          </p>
-        </div>
+    <AuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
+        <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Kanban Board</h1>
+        <p className="text-sm sm:text-base text-gray-600">Order Management Dashboard - Drag & Drop to Update Status</p>
+      </div>
 
-        <BoardFilters
-          filters={filters}
-          onFiltersChange={setFilters}
+      {/* Pipeline Filter */}
+      <div className="mb-6 flex items-center justify-between">
+        <PipelineFilter
           orders={orders}
+          selectedPipeline={selectedPipeline}
+          onPipelineChange={setSelectedPipeline}
         />
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => window.location.href = '/clients'}
+            variant="outline"
+            size="sm"
+          >
+            👥 Clients
+          </Button>
+          <Button 
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+          >
+            {loading ? 'Refreshing...' : '🔄 Refresh'}
+          </Button>
+        </div>
+      </div>
 
-        <DndContext
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragOver={handleDragOver}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {COLUMNS.map(column => (
-              <BoardColumn
-                key={column.id}
-                id={column.id}
-                title={column.title}
-                orders={ordersByStage[column.id] || []}
-                updating={updating}
-              />
-            ))}
-          </div>
+      {/* Interactive Board */}
+      <InteractiveBoard 
+        orders={filteredOrders} 
+        onOrderUpdate={handleOrderUpdate}
+        updatingOrders={updatingOrders}
+      />
 
-          <DragOverlay>
-            {activeId ? (
-              <OrderCard
-                order={orders.find(o => o.id === activeId)!}
-                isDragging={true}
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+      {/* Actions */}
+      <div className="mt-4 sm:mt-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="text-sm text-gray-600">
+          {selectedPipeline === 'all' 
+            ? `Total orders: ${orders.length}` 
+            : `Showing ${filteredOrders.length} of ${orders.length} orders (${selectedPipeline})`
+          }
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
+          <Button onClick={() => window.location.reload()} variant="outline" className="w-full sm:w-auto">
+            Refresh
+          </Button>
+          <Button onClick={handleForceReload} variant="destructive" className="w-full sm:w-auto">
+            🔄 Force Reload
+          </Button>
+          <Button asChild className="w-full sm:w-auto">
+            <a href="/intake">Create New Order</a>
+          </Button>
+        </div>
+      </div>
       </div>
     </div>
+    </AuthGuard>
   )
 }

@@ -41,7 +41,7 @@ export async function generatePDFFromHTML(
     displayHeaderFooter: false,
   }
 ): Promise<Buffer> {
-  let browser: puppeteer.Browser | null = null
+  let browser: any = null
 
   try {
     browser = await puppeteer.launch({
@@ -127,7 +127,7 @@ export async function generateLabelSheetPDF(
       })),
       rush: orderData.rush,
       createdAt: orderData.createdAt,
-      language: orderData.language || 'en',
+      language: (orderData as any).language || 'en',
     }
 
     // Generate HTML template
@@ -150,7 +150,7 @@ export async function generateLabelSheetPDF(
     const fileName = `labels/order-${orderData.orderNumber}-${nanoid(8)}.pdf`
     
     // Upload to storage
-    const file = new File([pdfBuffer], fileName, { type: 'application/pdf' })
+    const file = new File([pdfBuffer as any], fileName, { type: 'application/pdf' })
     
     const uploadResult = await storageService.uploadFile({
       bucket: 'labels',
@@ -225,7 +225,7 @@ export async function generateReceiptPDF(
     const fileName = `docs/receipt-${orderData.orderNumber}-${nanoid(8)}.pdf`
     
     // Upload to storage
-    const file = new File([pdfBuffer], fileName, { type: 'application/pdf' })
+    const file = new File([pdfBuffer as any], fileName, { type: 'application/pdf' })
     
     const uploadResult = await storageService.uploadFile({
       bucket: 'docs',
@@ -268,7 +268,7 @@ function getClientInitials(clientName: string): string {
  * Generate HTML for receipt
  */
 function generateReceiptHTML(orderData: any): string {
-  const isFrench = orderData.language === 'fr'
+  const isFrench = (orderData as any).language === 'fr'
   
   const formatCurrency = (cents: number) => {
     return `$${(cents / 100).toFixed(2)}`
@@ -310,11 +310,12 @@ function generateReceiptHTML(orderData: any): string {
     },
   }
 
-  const t = strings[orderData.language || 'en']
+  const language = (orderData as any).language || 'en'
+  const t = strings[language as keyof typeof strings] || strings.en
 
   return `
 <!DOCTYPE html>
-<html lang="${orderData.language}">
+<html lang="${(orderData as any).language || 'en'}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

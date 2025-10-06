@@ -5,7 +5,7 @@ import {
   getCorrelationId, 
   logEvent, 
   validateRequest,
-  requireAuth,
+  UnauthorizedError,
   NotFoundError,
   ConflictError
 } from '@/lib/api/error-handler'
@@ -16,10 +16,13 @@ async function handleTaskStop(
   { params }: { params: { id: string } }
 ): Promise<TaskResponse> {
   const correlationId = getCorrelationId(request)
-  const supabase = createClient()
+    const supabase = await createClient()
   
   // Validate authentication
-  const token = requireAuth(request)
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    throw new UnauthorizedError('Authentication required')
+  }
   
   // Parse and validate request body
   const body = await request.json()
@@ -27,11 +30,7 @@ async function handleTaskStop(
   
   const taskId = params.id
 
-  // Get current user ID from token (in real implementation, decode JWT)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    throw new Error('User not authenticated')
-  }
+  // Get current user ID
   const userId = user.id
 
   // Check if task exists and is assigned to current user
@@ -46,26 +45,26 @@ async function handleTaskStop(
   }
 
   // Check if task is assigned to current user
-  if (task.assignee !== userId) {
+  if ((task as any).assignee !== userId) {
     throw new ConflictError('Task is not assigned to current user', correlationId)
   }
 
   // Check if task is active
-  if (!task.is_active) {
+  if (!(task as any).is_active) {
     throw new ConflictError('Task is not active', correlationId)
   }
 
   // Calculate actual minutes if not provided
   let actualMinutes = validatedData.actual_minutes
-  if (actualMinutes === undefined && task.started_at) {
-    const startTime = new Date(task.started_at)
+  if (actualMinutes === undefined && (task as any).started_at) {
+    const startTime = new Date((task as any).started_at)
     const endTime = new Date()
     actualMinutes = Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60))
   }
 
   // Update the task
   const now = new Date().toISOString()
-  const { error: updateError } = await supabase
+  const { error: updateError } = await (supabase as any)
     .from('task')
     .update({
       is_active: false,
@@ -83,8 +82,8 @@ async function handleTaskStop(
   await logEvent('task', taskId, 'stopped', {
     correlationId,
     assignee: userId,
-    operation: task.operation,
-    garmentId: task.garment_id,
+    operation: (task as any).operation,
+    garmentId: (task as any).garment_id,
     actualMinutes: actualMinutes || 0,
   })
 
@@ -92,7 +91,7 @@ async function handleTaskStop(
     taskId,
     status: 'stopped',
     actual_minutes: actualMinutes || 0,
-    message: `Task "${task.operation}" stopped successfully. Duration: ${actualMinutes || 0} minutes`,
+    message: `Task "${(task as any).operation}" stopped successfully. Duration: ${actualMinutes || 0} minutes`,
   }
 
   return response

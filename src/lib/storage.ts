@@ -120,7 +120,7 @@ export class StorageService {
   /**
    * Generate a unique file path with timestamp
    */
-  generateFilePath(bucket: StorageBucket, originalName: string, prefix?: string): string {
+  generateFilePath(_bucket: StorageBucket, originalName: string, prefix?: string): string {
     const timestamp = Date.now()
     const randomId = Math.random().toString(36).substring(2, 8)
     const extension = originalName.split('.').pop()

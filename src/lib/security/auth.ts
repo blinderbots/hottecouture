@@ -14,7 +14,7 @@ export interface UserSession {
  * Get the current user's session with role information
  */
 export async function getCurrentUser(): Promise<UserSession | null> {
-  const supabase = createClient()
+  const supabase = await createClient()
   
   const {
     data: { user },
@@ -30,8 +30,8 @@ export async function getCurrentUser(): Promise<UserSession | null> {
   return {
     user: {
       id: user.id,
-      email: user.email,
-      app_role,
+      ...(user.email && { email: user.email }),
+      ...(app_role && { app_role }),
     },
     role: app_role,
   }
@@ -59,7 +59,7 @@ export async function isOwner(): Promise<boolean> {
  */
 export async function canAccessResource(
   resource: string,
-  resourceId?: string,
+  _resourceId?: string,
   additionalContext?: Record<string, any>
 ): Promise<boolean> {
   const session = await getCurrentUser()
@@ -174,7 +174,7 @@ export async function getUserPermissions() {
  */
 export async function requirePermission(
   permission: keyof Awaited<ReturnType<typeof getUserPermissions>>,
-  redirectTo: string = '/auth/sign-in'
+  _redirectTo: string = '/auth/sign-in'
 ) {
   const permissions = await getUserPermissions()
   
@@ -188,7 +188,7 @@ export async function requirePermission(
  */
 export async function getNavigationItems() {
   const permissions = await getUserPermissions()
-  const session = await getCurrentUser()
+  // const _session = await getCurrentUser()
 
   const items = [
     {

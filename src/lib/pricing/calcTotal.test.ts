@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   calculateItemPrice,
   calculateRushFee,
@@ -23,7 +23,7 @@ const mockEnv = {
 
 describe('Pricing Calculations', () => {
   beforeEach(() => {
-    vi.stubEnv(mockEnv)
+    Object.assign(process.env, mockEnv)
   })
 
   describe('calculateItemPrice', () => {
@@ -394,7 +394,7 @@ describe('Pricing Calculations', () => {
     })
 
     it('should use default values when environment variables are missing', () => {
-      vi.stubEnv({})
+      Object.assign(process.env, {})
 
       const config = getPricingConfig()
 

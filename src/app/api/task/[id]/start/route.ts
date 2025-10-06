@@ -5,33 +5,32 @@ import {
   getCorrelationId, 
   logEvent, 
   validateRequest,
-  requireAuth,
+  UnauthorizedError,
   NotFoundError,
   ConflictError
 } from '@/lib/api/error-handler'
-import { taskStartSchema, TaskStart, TaskResponse } from '@/lib/dto'
+import { taskStartSchema, TaskResponse } from '@/lib/dto'
 
 async function handleTaskStart(
   request: NextRequest,
   { params }: { params: { id: string } }
 ): Promise<TaskResponse> {
   const correlationId = getCorrelationId(request)
-  const supabase = createClient()
+    const supabase = await createClient()
   
   // Validate authentication
-  const token = requireAuth(request)
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    throw new UnauthorizedError('Authentication required')
+  }
   
   // Parse and validate request body
   const body = await request.json()
-  const validatedData = validateRequest(taskStartSchema, body, correlationId) as TaskStart
+  validateRequest(taskStartSchema, body, correlationId)
   
   const taskId = params.id
 
-  // Get current user ID from token (in real implementation, decode JWT)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    throw new Error('User not authenticated')
-  }
+  // Get current user ID
   const userId = user.id
 
   // Check if task exists
@@ -46,7 +45,7 @@ async function handleTaskStart(
   }
 
   // Check if task is already active
-  if (task.is_active) {
+  if ((task as any).is_active) {
     throw new ConflictError('Task is already active', correlationId)
   }
 
@@ -63,14 +62,14 @@ async function handleTaskStart(
 
   if (activeTasks && activeTasks.length > 0) {
     throw new ConflictError(
-      `User already has an active task: ${activeTasks[0].operation}`,
+      `User already has an active task: ${(activeTasks as any[])[0].operation}`,
       correlationId
     )
   }
 
   // Start the task
   const now = new Date().toISOString()
-  const { error: updateError } = await supabase
+  const { error: updateError } = await (supabase as any)
     .from('task')
     .update({
       assignee: userId,
@@ -88,14 +87,14 @@ async function handleTaskStart(
   await logEvent('task', taskId, 'started', {
     correlationId,
     assignee: userId,
-    operation: task.operation,
-    garmentId: task.garment_id,
+    operation: (task as any).operation,
+    garmentId: (task as any).garment_id,
   })
 
   const response: TaskResponse = {
     taskId,
     status: 'started',
-    message: `Task "${task.operation}" started successfully`,
+    message: `Task "${(task as any).operation}" started successfully`,
   }
 
   return response

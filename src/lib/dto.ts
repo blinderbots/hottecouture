@@ -13,11 +13,7 @@ export const clientCreateSchema = z.object({
   last_name: z.string().min(1, 'Last name is required').max(100),
   phone: phoneSchema.optional(),
   email: emailSchema.optional(),
-  preferred_contact: z.enum(['sms', 'email']).default('email'),
-  newsletter_consent: z.boolean().default(false),
-  language: z.enum(['fr', 'en']).default('en'),
-  ghl_contact_id: z.string().max(100).optional(),
-  notes: z.string().max(1000).optional(),
+  language: z.enum(['fr', 'en']).default('fr'),
 })
 
 export const clientUpdateSchema = clientCreateSchema.partial()
@@ -28,11 +24,12 @@ export const prioritySchema = z.enum(['normal', 'rush', 'custom'])
 export const orderStatusSchema = z.enum(['pending', 'working', 'done', 'ready', 'delivered', 'archived'])
 
 export const orderCreateSchema = z.object({
-  client_id: uuidSchema,
+  client_id: uuidSchema.optional(), // Optional because API handles client creation/upsert
   type: orderTypeSchema,
   priority: prioritySchema.default('normal'),
   due_date: z.string().datetime().optional(),
   rush: z.boolean().default(false),
+  rush_fee_type: z.enum(['small', 'large']).optional(),
   ghl_opportunity_id: z.string().max(100).optional(),
 })
 
@@ -56,6 +53,10 @@ export const intakeRequestSchema = z.object({
   client: clientCreateSchema,
   order: orderCreateSchema,
   garments: z.array(garmentCreateSchema).min(1, 'At least one garment is required'),
+  notes: z.object({
+    measurements: z.string().optional(),
+    specialInstructions: z.string().optional(),
+  }).optional(),
 })
 
 export const intakeResponseSchema = z.object({

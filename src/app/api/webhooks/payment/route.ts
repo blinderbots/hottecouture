@@ -5,17 +5,25 @@ import {
   getCorrelationId, 
   logEvent, 
   validateRequest,
-  requireAuth,
+  UnauthorizedError,
   NotFoundError
 } from '@/lib/api/error-handler'
 import { webhookPaymentSchema, WebhookPayment, WebhookResponse } from '@/lib/dto'
 
 async function handlePaymentWebhook(request: NextRequest): Promise<WebhookResponse> {
   const correlationId = getCorrelationId(request)
-  const supabase = createClient()
+    const supabase = await createClient()
   
   // Validate authentication (webhook secret)
-  requireAuth(request)
+  const authHeader = request.headers.get('authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new UnauthorizedError('Missing or invalid webhook authorization')
+  }
+  
+  const webhookSecret = authHeader.substring(7)
+  if (webhookSecret !== process.env.WEBHOOK_SECRET) {
+    throw new UnauthorizedError('Invalid webhook secret')
+  }
   
   // Parse and validate request body
   const body = await request.json()
@@ -43,16 +51,16 @@ async function handlePaymentWebhook(request: NextRequest): Promise<WebhookRespon
   }
 
   // Validate payment amount
-  const expectedAmount = order.total_cents - order.deposit_cents
+  const expectedAmount = (order as any).total_cents - (order as any).deposit_cents
   if (amount_cents !== expectedAmount) {
     throw new Error(`Payment amount mismatch. Expected: ${expectedAmount}, Received: ${amount_cents}`)
   }
 
   // Update order with payment information
-  const { error: updateError } = await supabase
+  const { error: updateError } = await (supabase as any)
     .from('order')
     .update({ 
-      deposit_cents: order.deposit_cents + amount_cents,
+      deposit_cents: (order as any).deposit_cents + amount_cents,
       // If this is the full payment, mark as paid
       ...(amount_cents >= expectedAmount && { status: 'ready' })
     })
@@ -63,7 +71,7 @@ async function handlePaymentWebhook(request: NextRequest): Promise<WebhookRespon
   }
 
   // Create payment record (if you have a payments table)
-  const { error: paymentError } = await supabase
+  const { error: paymentError } = await (supabase as any)
     .from('document')
     .insert({
       order_id: orderId,
@@ -92,7 +100,7 @@ async function handlePaymentWebhook(request: NextRequest): Promise<WebhookRespon
     transaction_id,
     timestamp,
     metadata,
-    orderNumber: order.order_number,
+    orderNumber: (order as any).order_number,
   })
 
   // TODO: Implement actual payment processor integration
@@ -103,7 +111,7 @@ async function handlePaymentWebhook(request: NextRequest): Promise<WebhookRespon
 
   const response: WebhookResponse = {
     success: true,
-    message: `Payment of ${currency} ${(amount_cents / 100).toFixed(2)} received for order ${order.order_number}`,
+    message: `Payment of ${currency} ${(amount_cents / 100).toFixed(2)} received for order ${(order as any).order_number}`,
     correlationId,
   }
 

@@ -1,291 +1,343 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { 
-  withErrorHandling, 
-  getCorrelationId, 
-  logEvent, 
-  validateRequest,
-  requireAuth 
-} from '@/lib/api/error-handler'
-import { intakeRequestSchema, IntakeRequest, IntakeResponse } from '@/lib/dto'
-import { calculateOrderPricing, getPricingConfig } from '@/lib/pricing'
-import { generateQRCode } from '@/lib/utils/qr'
-import { generateReceiptPDF } from '@/lib/labels/pdf-generator'
-import { nanoid } from 'nanoid'
+import QRCode from 'qrcode'
+import { upsertGHLContact, formatClientForGHL } from '@/lib/webhooks/ghl-webhook'
 
-async function handleIntake(request: NextRequest): Promise<IntakeResponse> {
-  const correlationId = getCorrelationId(request)
-  const supabase = createClient()
+export async function POST(request: NextRequest) {
+  const correlationId = crypto.randomUUID()
+  console.log('🚀 Intake API: New order creation request', { correlationId })
   
-  // Validate authentication
-  requireAuth(request)
-  
-  // Parse and validate request body
-  const body = await request.json()
-  const validatedData = validateRequest(intakeRequestSchema, body, correlationId) as IntakeRequest
-  
-  const { client, order, garments } = validatedData
-
-  // Start transaction-like operations
   try {
-    // 1. Upsert client
-    const { data: existingClient } = await supabase
-      .from('client')
-      .select('id')
-      .eq('email', client.email)
-      .single()
-
+    const supabase = await createClient()
+    
+    // Parse request body
+    const body = await request.json()
+    console.log('📝 Intake API: Request body received', { 
+      correlationId,
+      hasClient: !!body.client, 
+      hasOrder: !!body.order, 
+      hasGarments: !!body.garments,
+      garmentsCount: body.garments?.length || 0,
+      clientName: body.client?.first_name,
+      orderType: body.order?.type
+    })
+    
+    // Basic validation
+    if (!body.client || !body.order || !body.garments) {
+      console.error('❌ Intake API: Missing required fields', { 
+        correlationId,
+        hasClient: !!body.client, 
+        hasOrder: !!body.order, 
+        hasGarments: !!body.garments 
+      })
+      return NextResponse.json({ 
+        error: 'Missing required fields: client, order, garments' 
+      }, { status: 400 })
+    }
+    
+    const { client, order, garments, notes } = body
+    
+    // 1. Create or find client
     let clientId: string
-    if (existingClient) {
-      // Update existing client
-      const { error: updateError } = await supabase
+    
+    // Try to find existing client by email or phone
+    let existingClient = null
+    
+    if (client.email) {
+      // First try by email
+      const { data: emailClient } = await supabase
         .from('client')
-        .update(client)
-        .eq('id', existingClient.id)
+        .select('id')
+        .eq('email', client.email)
+        .single()
       
-      if (updateError) throw new Error(`Failed to update client: ${updateError.message}`)
-      clientId = existingClient.id
+      if (emailClient) {
+        existingClient = emailClient
+        console.log('Found existing client by email:', (emailClient as any).id)
+      }
+    }
+    
+    // If not found by email, try by phone
+    if (!existingClient && client.phone) {
+      const { data: phoneClient } = await supabase
+        .from('client')
+        .select('id')
+        .eq('phone', client.phone)
+        .single()
       
-      await logEvent('client', clientId, 'updated', { correlationId })
+      if (phoneClient) {
+        existingClient = phoneClient
+        console.log('Found existing client by phone:', (phoneClient as any).id)
+      }
+    }
+    
+    if (existingClient) {
+      clientId = (existingClient as any).id
     } else {
       // Create new client
-      const { data: newClient, error: createError } = await supabase
+      const { data: newClient, error: clientError } = await supabase
         .from('client')
-        .insert(client)
-        .select('id')
-        .single()
-      
-      if (createError) throw new Error(`Failed to create client: ${createError.message}`)
-      clientId = newClient.id
-      
-      await logEvent('client', clientId, 'created', { correlationId })
-    }
-
-    // 2. Create order
-    const orderData = {
-      ...order,
-      client_id: clientId,
-    }
-    
-    const { data: newOrder, error: orderError } = await supabase
-      .from('order')
-      .insert(orderData)
-      .select('id, order_number')
-      .single()
-    
-    if (orderError) throw new Error(`Failed to create order: ${orderError.message}`)
-    
-    const orderId = newOrder.id
-    const orderNumber = newOrder.order_number
-    
-    await logEvent('order', orderId, 'created', { 
-      correlationId,
-      orderNumber,
-      type: order.type,
-      rush: order.rush 
-    })
-
-    // 3. Create garments and services
-    const garmentIds: string[] = []
-    const pricingItems: any[] = []
-    
-    for (const garmentData of garments) {
-      const { services, photoTempPath, positionNotes, ...garmentFields } = garmentData
-      
-      // Create garment
-      const { data: newGarment, error: garmentError } = await supabase
-        .from('garment')
         .insert({
-          ...garmentFields,
-          order_id: orderId,
-          photo_path: photoTempPath,
-          position_notes: positionNotes,
-        })
+          first_name: client.first_name,
+          last_name: client.last_name,
+          email: client.email,
+          phone: client.phone,
+          language: client.language || 'fr'
+        } as any)
         .select('id')
         .single()
       
-      if (garmentError) throw new Error(`Failed to create garment: ${garmentError.message}`)
+      if (clientError) {
+        console.error('Client creation error:', clientError)
+        return NextResponse.json({ 
+          error: `Failed to create client: ${clientError.message}` 
+        }, { status: 500 })
+      }
       
-      const garmentId = newGarment.id
-      garmentIds.push(garmentId)
+      clientId = (newClient as any).id
+      console.log('Created new client:', clientId)
       
-      await logEvent('garment', garmentId, 'created', { 
-        correlationId,
-        orderId,
-        type: garmentData.type 
-      })
+      // Send new client to GHL webhook
+      let ghlContactId = null
+      try {
+        const ghlContactData = formatClientForGHL({
+          first_name: client.first_name,
+          last_name: client.last_name,
+          email: client.email,
+          phone: client.phone
+        })
+        
+        const ghlResult = await upsertGHLContact(ghlContactData)
+        if (ghlResult.success) {
+          ghlContactId = ghlResult.contactId
+          console.log('✅ GHL contact created successfully for client:', clientId, 'Contact ID:', ghlContactId)
+        } else {
+          console.warn('⚠️ GHL webhook failed (non-blocking):', ghlResult.error)
+        }
+      } catch (ghlError) {
+        console.warn('⚠️ GHL webhook error (non-blocking):', ghlError)
+        // Don't fail the order creation if GHL webhook fails
+      }
 
-      // Create garment services
-      for (const service of services) {
-        // Get service base price
+      // Update client with GHL contact ID if we got one
+      if (ghlContactId) {
+        try {
+          await (supabase as any)
+            .from('client')
+            .update({ ghl_contact_id: ghlContactId })
+            .eq('id', clientId)
+          console.log('✅ Updated client with GHL contact ID:', ghlContactId)
+        } catch (updateError) {
+          console.warn('⚠️ Failed to update client with GHL contact ID (non-blocking):', updateError)
+        }
+      }
+    }
+    
+    // 2. Calculate pricing
+    let subtotal_cents = 0
+    
+    // Calculate subtotal from garments and services
+    console.log('🔍 Intake API: garments data:', garments)
+    
+    for (const garment of garments) {
+      console.log(`🔍 Intake API: processing garment: ${garment.type}`)
+      for (const service of garment.services) {
+        console.log(`🔍 Intake API: processing service: ${service.serviceId}, qty: ${service.qty}, customPrice: ${service.customPriceCents}`)
+        
+        // Get base price from service table
         const { data: serviceData } = await supabase
           .from('service')
           .select('base_price_cents')
           .eq('id', service.serviceId)
           .single()
         
-        if (!serviceData) {
-          throw new Error(`Service not found: ${service.serviceId}`)
-        }
-
-        // Create garment service relationship
-        const { error: garmentServiceError } = await supabase
-          .from('garment_service')
-          .insert({
-            garment_id: garmentId,
-            service_id: service.serviceId,
-            quantity: service.qty,
-            custom_price_cents: service.customPriceCents,
-          })
+        console.log(`🔍 Intake API: serviceData from DB:`, serviceData)
         
-        if (garmentServiceError) {
-          throw new Error(`Failed to create garment service: ${garmentServiceError.message}`)
-        }
+        const basePrice = (serviceData as any)?.base_price_cents || 5000
+        const servicePrice = service.customPriceCents || basePrice
+        
+        console.log(`🔍 Intake API: basePrice: ${basePrice}, servicePrice: ${servicePrice}, qty: ${service.qty}`)
+        
+        subtotal_cents += servicePrice * service.qty
+        console.log(`🔍 Intake API: running subtotal: ${subtotal_cents}`)
+      }
+    }
+    
+    const rush_fee_cents = order.rush ? (order.rush_fee_type === 'large' ? 6000 : 3000) : 0
+    const tax_rate = 0.12 // 12% tax
+    const tax_cents = Math.round((subtotal_cents + rush_fee_cents) * tax_rate)
+    const total_cents = subtotal_cents + rush_fee_cents + tax_cents
+    
+    console.log('🔍 Intake API: Calculated pricing:', {
+      subtotal_cents,
+      rush_fee_cents,
+      tax_cents,
+      total_cents
+    })
 
-        // Add to pricing calculation
-        pricingItems.push({
-          garment_id: garmentId,
-          service_id: service.serviceId,
-          quantity: service.qty,
-          custom_price_cents: service.customPriceCents,
-          base_price_cents: serviceData.base_price_cents,
+        // 3. Create order
+        console.log('📝 Intake API: Creating order', {
+          correlationId,
+          clientId,
+          orderType: order.type || 'alteration',
+          dueDate: order.due_date,
+          rush: order.rush || false,
+          subtotalCents: subtotal_cents,
+          totalCents: total_cents
         })
-
-        // Create task for this service
-        const { error: taskError } = await supabase
-          .from('task')
-          .insert({
-            garment_id: garmentId,
-            operation: `Process ${serviceData.base_price_cents ? 'service' : 'custom work'}`,
-            stage: 'pending',
-          })
         
-        if (taskError) {
-          throw new Error(`Failed to create task: ${taskError.message}`)
+        const { data: newOrder, error: orderError } = await supabase
+          .from('order')
+          .insert({
+            client_id: clientId,
+            type: order.type || 'alteration',
+            priority: order.priority || 'normal',
+            due_date: order.due_date,
+            rush: order.rush || false,
+            subtotal_cents: subtotal_cents,
+            tax_cents: tax_cents,
+            total_cents: total_cents,
+            rush_fee_cents: rush_fee_cents,
+            notes: JSON.stringify(notes || {}), // Save notes as JSON
+          } as any)
+          .select('id, order_number')
+          .single()
+        
+        if (orderError) {
+          console.error('❌ Intake API: Order creation error', {
+            correlationId,
+            error: orderError,
+            orderData: {
+              client_id: clientId,
+              type: order.type || 'alteration',
+              due_date: order.due_date,
+              rush: order.rush || false
+            }
+          })
+          return NextResponse.json({ 
+            error: `Failed to create order: ${orderError.message}` 
+          }, { status: 500 })
+        }
+        
+        console.log('✅ Intake API: Order created in database', {
+          correlationId,
+          orderId: (newOrder as any).id,
+          orderNumber: (newOrder as any).order_number
+        })
+    
+    console.log('Order created successfully:', newOrder)
+    
+    // 3. Create garments and related records
+    const garmentIds = []
+    for (const garment of garments) {
+      // Create garment
+      const { data: newGarment, error: garmentError } = await supabase
+        .from('garment')
+        .insert({
+          order_id: (newOrder as any).id,
+          garment_type_id: garment.garment_type_id, // Use the ID instead of type
+          type: garment.type, // Keep for backward compatibility
+          color: garment.color || 'Unknown',
+          brand: garment.brand || 'Unknown',
+          notes: garment.notes || '',
+          photo_path: garment.photo_path || null,
+          position_notes: garment.position_notes || null,
+          label_code: `GARM-${Math.random().toString(36).substr(2, 8).toUpperCase()}`
+        } as any)
+        .select('id')
+        .single()
+      
+      if (garmentError) {
+        console.error('Garment creation error:', garmentError)
+        return NextResponse.json({ 
+          error: `Failed to create garment: ${garmentError.message}` 
+        }, { status: 500 })
+      }
+      
+      garmentIds.push((newGarment as any).id)
+      
+      // Create garment_services
+      if (garment.services && garment.services.length > 0) {
+        for (const service of garment.services) {
+          // First, ensure the service exists
+          const { data: existingService, error: serviceCheckError } = await supabase
+            .from('service')
+            .select('id')
+            .eq('id', service.serviceId)
+            .single()
+          
+          let serviceId = service.serviceId
+          
+          if (serviceCheckError || !existingService) {
+            // Service doesn't exist - this should not happen if intake form is working correctly
+            console.error('❌ Intake API: Service not found in database:', service.serviceId)
+            console.error('❌ Intake API: This indicates the intake form is not working correctly')
+            return NextResponse.json({ 
+              error: `Service not found: ${service.serviceId}. Please refresh the page and try again.` 
+            }, { status: 400 })
+          }
+          
+          const { error: garmentServiceError } = await supabase
+            .from('garment_service')
+            .insert({
+              garment_id: (newGarment as any).id,
+              service_id: serviceId,
+              quantity: service.qty || 1,
+              custom_price_cents: service.customPriceCents || null,
+              notes: service.notes || null
+            } as any)
+          
+          if (garmentServiceError) {
+            console.error('Garment service creation error:', garmentServiceError)
+            return NextResponse.json({ 
+              error: `Failed to create garment service: ${garmentServiceError.message}` 
+            }, { status: 500 })
+          }
         }
       }
-    }
-
-    // 4. Calculate pricing
-    const config = getPricingConfig()
-    const calculation = calculateOrderPricing({
-      order_id: orderId,
-      is_rush: order.rush,
-      items: pricingItems,
-      config,
-    })
-
-    // 5. Update order with pricing
-    const { error: pricingError } = await supabase
-      .from('order')
-      .update({
-        subtotal_cents: calculation.subtotal_cents,
-        tax_cents: calculation.tax_cents,
-        total_cents: calculation.total_cents,
-        rush_fee_cents: calculation.rush_fee_cents,
-      })
-      .eq('id', orderId)
-    
-    if (pricingError) {
-      throw new Error(`Failed to update order pricing: ${pricingError.message}`)
-    }
-
-    // 6. Generate QR code
-    const qrValue = `ORD-${orderNumber}`
-    const qrcode = await generateQRCode(qrValue)
-
-    // 7. Update order with QR code
-    const { error: qrError } = await supabase
-      .from('order')
-      .update({ qrcode })
-      .eq('id', orderId)
-    
-    if (qrError) {
-      console.warn('Failed to update QR code:', qrError.message)
-    }
-
-    // 8. Enqueue label job (stub for now)
-    await logEvent('order', orderId, 'label_job_queued', { 
-      correlationId,
-      garmentCount: garments.length 
-    })
-
-    // 9. Generate receipt PDF
-    try {
-      const receiptData = {
-        orderNumber,
-        clientName: `${client.first_name} ${client.last_name}`,
-        clientEmail: client.email,
-        clientPhone: client.phone,
-        garments: garments.map(garment => ({
-          type: garment.type,
-          services: garment.services.map(service => ({
-            name: service.serviceId, // This would need to be resolved to service name
-            quantity: service.qty,
-            price: service.customPriceCents || 0, // This would need service base price
-          })),
-        })),
-        totals: {
-          subtotal_cents: calculation.subtotal_cents,
-          rush_fee_cents: calculation.rush_fee_cents,
-          tax_cents: calculation.tax_cents,
-          total_cents: calculation.total_cents,
-        },
-        rush: order.rush,
-        createdAt: new Date().toISOString(),
-        language: client.language || 'en',
-      }
-
-      const receiptResult = await generateReceiptPDF(receiptData)
       
-      // Store receipt path in order
-      await supabase
-        .from('order')
-        .update({ receipt_path: receiptResult.pdfPath })
-        .eq('id', orderId)
-
-      await logEvent('order', orderId, 'receipt_generated', { 
-        correlationId,
-        receiptPath: receiptResult.pdfPath 
-      })
-    } catch (receiptError) {
-      console.warn('Failed to generate receipt:', receiptError)
-      await logEvent('order', orderId, 'receipt_generation_failed', { 
-        correlationId,
-        error: receiptError instanceof Error ? receiptError.message : 'Unknown error' 
-      })
+      // Tasks removed - garments with services provide all necessary work information
     }
-
-    // 10. Return response
-    const response: IntakeResponse = {
-      orderId,
-      orderNumber,
-      totals: {
-        subtotal_cents: calculation.subtotal_cents,
-        tax_cents: calculation.tax_cents,
-        total_cents: calculation.total_cents,
-        rush_fee_cents: calculation.rush_fee_cents,
-      },
-      qrcode,
-    }
-
-    await logEvent('order', orderId, 'intake_completed', { 
-      correlationId,
-      orderNumber,
-      totalCents: calculation.total_cents 
+    
+    // Generate QR code as data URL
+    const qrText = `ORD-${(newOrder as any).order_number}`
+    const qrCodeDataUrl = await QRCode.toDataURL(qrText, {
+      width: 256,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
     })
-
-    return response
-
-  } catch (error) {
-    await logEvent('order', 'unknown', 'intake_failed', { 
-      correlationId,
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    })
-    throw error
-  }
-}
-
-export async function POST(request: NextRequest) {
-  return withErrorHandling(() => handleIntake(request), request)
+    
+        console.log('✅ Intake API: Order created successfully', {
+          correlationId,
+          orderId: (newOrder as any).id,
+          orderNumber: (newOrder as any).order_number,
+          clientName: client.first_name,
+          totalCents: total_cents
+        })
+        
+        return NextResponse.json({
+          orderId: (newOrder as any).id,
+          orderNumber: (newOrder as any).order_number,
+          totals: {
+            subtotal_cents: subtotal_cents,
+            tax_cents: tax_cents,
+            total_cents: total_cents,
+            rush_fee_cents: rush_fee_cents,
+          },
+          qrcode: qrCodeDataUrl // Actual QR code image as data URL
+        })
+    
+      } catch (error) {
+        console.error('❌ Intake API error:', error)
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+        console.error('❌ Request body that caused error: Check request body')
+        return NextResponse.json({ 
+          error: 'Internal server error',
+          details: error instanceof Error ? error.message : 'Unknown error',
+          correlationId: correlationId
+        }, { status: 500 })
+      }
 }

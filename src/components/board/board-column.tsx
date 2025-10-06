@@ -2,7 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { useTranslations } from 'next-intl'
+// import { useTranslations } from 'next-intl'
 import { OrderCard } from './order-card'
 import { BoardOrder, TaskStage } from '@/lib/board/types'
 
@@ -11,10 +11,11 @@ interface BoardColumnProps {
   title: string
   orders: BoardOrder[]
   updating: Set<string>
+  onAssign?: (orderId: string) => void
 }
 
-export function BoardColumn({ id, title, orders, updating }: BoardColumnProps) {
-  const t = useTranslations('board.columns')
+export function BoardColumn({ id, title, orders, updating, onAssign }: BoardColumnProps) {
+  // const t = useTranslations('board.columns')
   const { setNodeRef, isOver } = useDroppable({
     id,
   })
@@ -62,7 +63,7 @@ export function BoardColumn({ id, title, orders, updating }: BoardColumnProps) {
     >
       <div className="mb-4">
         <h3 className={`text-lg font-semibold ${getColumnTextColor(id)}`}>
-          {t(id as any) || title}
+          {title}
         </h3>
         <p className="text-sm text-gray-600">
           {orders.length} order{orders.length !== 1 ? 's' : ''}
@@ -79,6 +80,7 @@ export function BoardColumn({ id, title, orders, updating }: BoardColumnProps) {
               key={order.id}
               order={order}
               isUpdating={updating.has(order.id)}
+              {...(onAssign && { onAssign })}
             />
           ))}
         </div>

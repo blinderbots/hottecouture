@@ -1,20 +1,18 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PipelineSelector } from '@/components/intake/pipeline-selector'
 import { ClientStep } from '@/components/intake/client-step'
 import { GarmentsStep } from '@/components/intake/garments-step'
-import { ServicesStep } from '@/components/intake/services-step'
+import { ServicesStepTablet } from '@/components/intake/services-step-tablet'
 import { NotesStep } from '@/components/intake/notes-step'
 import { PricingStep } from '@/components/intake/pricing-step'
 import { OrderSummary } from '@/components/intake/order-summary'
 import { IntakeRequest, IntakeResponse } from '@/lib/dto'
 import { usePricing } from '@/lib/pricing/usePricing'
-import { formatCurrency } from '@/lib/pricing'
 
-type IntakeStep = 'client' | 'garments' | 'services' | 'notes' | 'pricing' | 'summary'
+type IntakeStep = 'pipeline' | 'client' | 'garments' | 'services' | 'notes' | 'pricing' | 'summary'
 
 interface IntakeFormData {
   client: {
@@ -33,6 +31,8 @@ interface IntakeFormData {
     brand?: string
     notes?: string
     photoPath?: string
+    photoDataUrl?: string  // Local data URL for immediate display
+    photoFileName?: string // Intended filename for upload
     labelCode: string
     services: Array<{
       serviceId: string
@@ -40,53 +40,51 @@ interface IntakeFormData {
       customPriceCents?: number
     }>
   }>
-  notes: {
-    measurements?: string
-    specialInstructions?: string
-    documents: File[]
-    additionalPhotos: File[]
-  }
-  order: {
-    type: 'alteration' | 'custom'
-    due_date?: string
-    rush: boolean
-    deposit_required: boolean
-  }
+      notes: {
+        measurements?: string
+        specialInstructions?: string
+      }
+      order: {
+        type: 'alteration' | 'custom'
+        due_date?: string
+        rush: boolean
+        rush_fee_type?: 'small' | 'large'
+      }
 }
 
 const initialFormData: IntakeFormData = {
   client: null,
   garments: [],
-  notes: {
-    documents: [],
-    additionalPhotos: [],
-  },
-  order: {
-    type: 'alteration',
-    rush: false,
-    deposit_required: false,
-  },
+      notes: {
+        measurements: '',
+        specialInstructions: '',
+      },
+      order: {
+        type: 'alteration',
+        rush: false,
+        rush_fee_type: 'small',
+      },
 }
 
 export default function IntakePage() {
-  const t = useTranslations('intake')
-  const [currentStep, setCurrentStep] = useState<IntakeStep>('client')
+  const [currentStep, setCurrentStep] = useState<IntakeStep>('pipeline')
   const [formData, setFormData] = useState<IntakeFormData>(initialFormData)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderResult, setOrderResult] = useState<IntakeResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const pricing = usePricing({
+  usePricing({
     initialItems: [],
     isRush: formData.order.rush,
   })
 
   const steps: Array<{ key: IntakeStep; title: string; description: string }> = [
-    { key: 'client', title: t('steps.client'), description: 'Client information and contact details' },
-    { key: 'garments', title: t('steps.garments'), description: 'Add garments and take photos' },
-    { key: 'services', title: t('steps.services'), description: 'Select services and pricing' },
-    { key: 'notes', title: t('steps.notes'), description: 'Measurements and special instructions' },
-    { key: 'pricing', title: t('steps.pricing'), description: 'Final pricing and due date' },
+    { key: 'pipeline', title: 'Service Type', description: 'Choose alteration or custom design' },
+    { key: 'client', title: 'Client Information', description: 'Client information and contact details' },
+    { key: 'garments', title: 'Garments', description: 'Add garments and take photos' },
+    { key: 'services', title: 'Services', description: 'Select services and pricing' },
+    { key: 'notes', title: 'Notes & Measurements', description: 'Measurements and special instructions' },
+    { key: 'pricing', title: 'Pricing & Due Date', description: 'Final pricing and due date' },
   ]
 
   const updateFormData = useCallback((updates: Partial<IntakeFormData>) => {
@@ -96,16 +94,52 @@ export default function IntakePage() {
   const nextStep = useCallback(() => {
     const stepIndex = steps.findIndex(step => step.key === currentStep)
     if (stepIndex < steps.length - 1) {
-      setCurrentStep(steps[stepIndex + 1].key as IntakeStep)
+      const nextStep = steps[stepIndex + 1]
+      if (nextStep) {
+        setCurrentStep(nextStep.key as IntakeStep)
+      }
     }
   }, [currentStep, steps])
 
   const prevStep = useCallback(() => {
     const stepIndex = steps.findIndex(step => step.key === currentStep)
     if (stepIndex > 0) {
-      setCurrentStep(steps[stepIndex - 1].key as IntakeStep)
+      const prevStep = steps[stepIndex - 1]
+      if (prevStep) {
+        setCurrentStep(prevStep.key as IntakeStep)
+      }
     }
   }, [currentStep, steps])
+
+  const uploadPhoto = async (photoDataUrl: string, fileName: string): Promise<string> => {
+    try {
+      // Convert data URL to blob
+      const response = await fetch(photoDataUrl)
+      await response.blob()
+      
+      // Upload to Supabase Storage
+      const uploadResponse = await fetch('/api/upload-photo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileName,
+          dataUrl: photoDataUrl
+        }),
+      })
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload photo')
+      }
+      
+      const { path } = await uploadResponse.json()
+      return path
+    } catch (error) {
+      console.error('Photo upload failed:', error)
+      throw error
+    }
+  }
 
   const handleSubmit = async () => {
     if (!formData.client) {
@@ -122,16 +156,31 @@ export default function IntakePage() {
     setError(null)
 
     try {
+      // Upload photos first
+      const garmentsWithUploadedPhotos = await Promise.all(
+        formData.garments.map(async (garment) => {
+          if (garment.photoDataUrl && garment.photoFileName) {
+            const photoPath = await uploadPhoto(garment.photoDataUrl, garment.photoFileName)
+            return {
+              ...garment,
+              photoPath
+            }
+          }
+          return garment
+        })
+      )
+
       // Convert form data to API format
       const intakeRequest: IntakeRequest = {
         client: formData.client,
         order: {
-          client_id: '', // Will be set by API
           type: formData.order.type,
+          priority: 'normal' as const,
           due_date: formData.order.due_date,
           rush: formData.order.rush,
+          rush_fee_type: formData.order.rush_fee_type,
         },
-        garments: formData.garments.map(garment => ({
+        garments: garmentsWithUploadedPhotos.map(garment => ({
           type: garment.type,
           color: garment.color,
           brand: garment.brand,
@@ -139,6 +188,7 @@ export default function IntakePage() {
           photoTempPath: garment.photoPath,
           services: garment.services,
         })),
+        notes: formData.notes,
       }
 
       const response = await fetch('/api/intake', {
@@ -166,11 +216,19 @@ export default function IntakePage() {
 
   const renderStep = () => {
     switch (currentStep) {
+      case 'pipeline':
+        return (
+          <PipelineSelector
+            selectedPipeline={formData.order.type}
+            onPipelineChange={(type) => updateFormData({ order: { ...formData.order, type } })}
+            onNext={nextStep}
+          />
+        )
       case 'client':
         return (
           <ClientStep
-            data={formData.client}
-            onUpdate={(client) => updateFormData({ client })}
+            data={formData.client as any}
+            onUpdate={(client) => updateFormData({ client: client as any })}
             onNext={nextStep}
           />
         )
@@ -185,7 +243,7 @@ export default function IntakePage() {
         )
       case 'services':
         return (
-          <ServicesStep
+          <ServicesStepTablet
             data={formData.garments}
             onUpdate={(garments) => updateFormData({ garments })}
             onNext={nextStep}
@@ -199,12 +257,17 @@ export default function IntakePage() {
             onUpdate={(notes) => updateFormData({ notes })}
             onNext={nextStep}
             onPrev={prevStep}
+            garments={formData.garments.map((g, index) => ({
+              type: g.type,
+              id: g.labelCode || `garment-${index}`
+            }))}
           />
         )
       case 'pricing':
         return (
           <PricingStep
             data={formData.order}
+            garments={formData.garments}
             onUpdate={(order) => updateFormData({ order })}
             onNext={handleSubmit}
             onPrev={prevStep}
@@ -217,7 +280,7 @@ export default function IntakePage() {
             order={orderResult}
             onPrintLabels={() => {
               if (orderResult) {
-                window.open(`/api/labels/${orderResult.orderId}`, '_blank')
+                window.open(`/labels/${orderResult.orderId}`, '_blank')
               }
             }}
             onNewOrder={() => {
@@ -233,10 +296,10 @@ export default function IntakePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-center mb-2">{t('title')}</h1>
+          <h1 className="text-3xl font-bold text-center mb-2">Order Intake</h1>
           <p className="text-center text-gray-600">
             Complete order intake in {steps.length} simple steps
           </p>

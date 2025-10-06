@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useTranslations } from 'next-intl'
+// import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { Service } from '@/lib/types/database'
-import { formatCurrency } from '@/lib/pricing'
+import { formatCurrency } from '@/lib/pricing/client'
 
 interface Garment {
   type: string
@@ -30,7 +30,7 @@ interface ServicesStepProps {
 }
 
 export function ServicesStep({ data, onUpdate, onNext, onPrev }: ServicesStepProps) {
-  const t = useTranslations('intake.services')
+  // const t = useTranslations('intake.services')
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [subtotal, setSubtotal] = useState(0)
@@ -86,17 +86,19 @@ export function ServicesStep({ data, onUpdate, onNext, onPrev }: ServicesStepPro
     const updatedGarments = [...data]
     const garment = updatedGarments[garmentIndex]
     
+    if (!garment) return
+    
     // Check if service already exists
     const existingServiceIndex = garment.services.findIndex(s => s.serviceId === serviceId)
     
     if (existingServiceIndex >= 0) {
       // Update quantity
-      garment.services[existingServiceIndex].qty += 1
+      garment.services[existingServiceIndex]!.qty += 1
     } else {
-      // Add new service
+      // Add new service with complete data
       garment.services.push({
         serviceId,
-        qty: 1,
+        qty: 1
       })
     }
 
@@ -107,19 +109,35 @@ export function ServicesStep({ data, onUpdate, onNext, onPrev }: ServicesStepPro
     if (qty <= 0) return
 
     const updatedGarments = [...data]
-    updatedGarments[garmentIndex].services[serviceIndex].qty = qty
+    const garment = updatedGarments[garmentIndex]
+    
+    if (!garment || !garment.services[serviceIndex]) return
+    
+    garment.services[serviceIndex].qty = qty
     onUpdate(updatedGarments)
   }
 
   const updateServicePrice = (garmentIndex: number, serviceIndex: number, customPriceCents?: number) => {
     const updatedGarments = [...data]
-    updatedGarments[garmentIndex].services[serviceIndex].customPriceCents = customPriceCents
+    const garment = updatedGarments[garmentIndex]
+    
+    if (!garment || !garment.services[serviceIndex]) return
+    
+    if (customPriceCents !== undefined) {
+      garment.services[serviceIndex].customPriceCents = customPriceCents
+    } else {
+      delete garment.services[serviceIndex].customPriceCents
+    }
     onUpdate(updatedGarments)
   }
 
   const removeService = (garmentIndex: number, serviceIndex: number) => {
     const updatedGarments = [...data]
-    updatedGarments[garmentIndex].services.splice(serviceIndex, 1)
+    const garment = updatedGarments[garmentIndex]
+    
+    if (!garment || !garment.services[serviceIndex]) return
+    
+    garment.services.splice(serviceIndex, 1)
     onUpdate(updatedGarments)
   }
 
@@ -136,7 +154,7 @@ export function ServicesStep({ data, onUpdate, onNext, onPrev }: ServicesStepPro
       {/* Services list */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('selectServices')}</CardTitle>
+          <CardTitle>Select Services</CardTitle>
           <CardDescription>
             Select services for each garment
           </CardDescription>
@@ -233,12 +251,16 @@ export function ServicesStep({ data, onUpdate, onNext, onPrev }: ServicesStepPro
                               <input
                                 type="number"
                                 min="0"
-                                value={service.customPriceCents || ''}
-                                onChange={(e) => updateServicePrice(garmentIndex, serviceIndex, parseInt(e.target.value) || undefined)}
-                                placeholder={serviceData.base_price_cents.toString()}
+                                step="0.01"
+                                value={service.customPriceCents ? (service.customPriceCents / 100).toFixed(2) : ''}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value)
+                                  updateServicePrice(garmentIndex, serviceIndex, isNaN(value) ? undefined : Math.round(value * 100))
+                                }}
+                                placeholder={(serviceData.base_price_cents / 100).toFixed(2)}
                                 className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary"
                               />
-                              <span className="text-xs text-gray-500">cents</span>
+                              <span className="text-xs text-gray-500">$</span>
                             </div>
                           </div>
                           <div className="text-right">
@@ -263,7 +285,7 @@ export function ServicesStep({ data, onUpdate, onNext, onPrev }: ServicesStepPro
               </div>
             ) : (
               <div className="text-center py-4 text-gray-500">
-                {t('noServices')}
+                No services available
               </div>
             )}
           </CardContent>
