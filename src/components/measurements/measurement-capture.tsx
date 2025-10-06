@@ -37,6 +37,7 @@ export function MeasurementCapture({
   const [measurements, setMeasurements] = useState<MeasurementSet | null>(null)
   const [unit, setUnit] = useState<'inches' | 'centimeters'>('inches')
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [isValidating, setIsValidating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
