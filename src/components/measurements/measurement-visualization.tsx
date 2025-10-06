@@ -26,9 +26,6 @@ export function MeasurementVisualization({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   const categories = Array.from(new Set(measurements.points.map(p => p.category)))
-  const filteredPoints = selectedCategory 
-    ? measurements.points.filter(p => p.category === selectedCategory)
-    : measurements.points
 
   const formatValue = (point: MeasurementPoint) => {
     if (point.value === undefined) return 'Not measured'
