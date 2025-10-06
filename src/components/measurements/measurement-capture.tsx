@@ -218,7 +218,7 @@ export function MeasurementCapture({
             <MeasurementInput
               key={point.id}
               point={point}
-              value={point.value}
+              value={point.value ?? undefined}
               notes={point.notes}
               unit={unit}
               onChange={(value, notes) => updateMeasurement(point.id, value, notes)}
@@ -241,7 +241,7 @@ export function MeasurementCapture({
               <MeasurementInput
                 key={point.id}
                 point={point}
-                value={point.value}
+                value={point.value ?? undefined}
                 notes={point.notes}
                 unit={unit}
                 onChange={(value, notes) => updateMeasurement(point.id, value, notes)}
