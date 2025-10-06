@@ -302,7 +302,7 @@ export function MeasurementCapture({
 interface MeasurementInputProps {
   point: MeasurementPoint
   value?: number | undefined
-  notes?: string
+  notes?: string | undefined
   unit: 'inches' | 'centimeters'
   onChange: (value: number | undefined, notes?: string) => void
 }
