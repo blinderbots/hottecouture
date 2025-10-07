@@ -1,35 +1,48 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Upload, Download, RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import {
+  Upload,
+  Download,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+} from 'lucide-react';
 
 interface ImportResult {
-  success: boolean
-  imported: number
-  errors: string[]
-  warnings: string[]
+  success: boolean;
+  imported: number;
+  errors: string[];
+  warnings: string[];
 }
 
 export default function PricingManagementPage() {
-  const [isImporting, setIsImporting] = useState(false)
-  const [importResult, setImportResult] = useState<ImportResult | null>(null)
-  const [csvData, setCsvData] = useState('')
-  const [replaceExisting, setReplaceExisting] = useState(false)
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [csvData, setCsvData] = useState('');
+  const [replaceExisting, setReplaceExisting] = useState(false);
 
   const handleImport = async (type: 'sample' | 'csv' | 'json') => {
-    setIsImporting(true)
-    setImportResult(null)
+    setIsImporting(true);
+    setImportResult(null);
 
     try {
-      let requestData: any = { type, replaceExisting }
+      const requestData: any = { type, replaceExisting };
 
       if (type === 'csv') {
-        requestData.data = csvData
+        requestData.data = csvData;
       }
 
       const response = await fetch('/api/pricing/import', {
@@ -38,21 +51,21 @@ export default function PricingManagementPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestData),
-      })
+      });
 
-      const result = await response.json()
-      setImportResult(result)
+      const result = await response.json();
+      setImportResult(result);
     } catch (error) {
       setImportResult({
         success: false,
         imported: 0,
         errors: [`Import failed: ${error}`],
-        warnings: []
-      })
+        warnings: [],
+      });
     } finally {
-      setIsImporting(false)
+      setIsImporting(false);
     }
-  }
+  };
 
   const downloadSampleCSV = () => {
     const sampleData = [
@@ -63,29 +76,31 @@ export default function PricingManagementPage() {
       'Pants Waist In,waist,25.00,Take in pants waist,30,false,👖',
       'Sleeve Shorten,sleeves,18.00,Shorten sleeves,25,false,👕',
       'Zipper Repair,repairs,25.00,Replace or repair zipper,45,false,🔧',
-      'Custom Design Consultation,custom,100.00,Custom design consultation,120,true,✨'
-    ].join('\n')
+      'Custom Design Consultation,custom,100.00,Custom design consultation,120,true,✨',
+    ].join('\n');
 
-    const blob = new Blob([sampleData], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'pricing-template.csv'
-    a.click()
-    window.URL.revokeObjectURL(url)
-  }
+    const blob = new Blob([sampleData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pricing-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-center mb-2">Pricing Management</h1>
-          <p className="text-center text-gray-600">
+    <div className='min-h-screen bg-gray-50 py-8'>
+      <div className='container mx-auto px-4 max-w-4xl'>
+        <div className='mb-8'>
+          <h1 className='text-3xl font-bold text-center mb-2'>
+            Pricing Management
+          </h1>
+          <p className='text-center text-gray-600'>
             Import and manage your service pricing from Excel/CSV files
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
           {/* Import Section */}
           <Card>
             <CardHeader>
@@ -94,71 +109,71 @@ export default function PricingManagementPage() {
                 Import your pricing from Excel/CSV files or use sample data
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className='space-y-6'>
               {/* Sample Data Import */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Quick Start</h3>
-                <p className="text-sm text-gray-600">
+              <div className='space-y-4'>
+                <h3 className='text-lg font-semibold'>Quick Start</h3>
+                <p className='text-sm text-gray-600'>
                   Import sample pricing data to get started quickly
                 </p>
                 <Button
                   onClick={() => handleImport('sample')}
                   disabled={isImporting}
-                  className="w-full"
+                  className='w-full'
                 >
                   {isImporting ? (
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    <RefreshCw className='w-4 h-4 mr-2 animate-spin' />
                   ) : (
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className='w-4 h-4 mr-2' />
                   )}
                   Import Sample Data
                 </Button>
               </div>
 
               {/* CSV Import */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Import from CSV</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="csv-data">CSV Data</Label>
+              <div className='space-y-4'>
+                <h3 className='text-lg font-semibold'>Import from CSV</h3>
+                <div className='space-y-2'>
+                  <Label htmlFor='csv-data'>CSV Data</Label>
                   <Textarea
-                    id="csv-data"
-                    placeholder="Paste your CSV data here..."
+                    id='csv-data'
+                    placeholder='Paste your CSV data here...'
                     value={csvData}
-                    onChange={(e) => setCsvData(e.target.value)}
+                    onChange={e => setCsvData(e.target.value)}
                     rows={6}
-                    className="font-mono text-sm"
+                    className='font-mono text-sm'
                   />
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className='flex items-center space-x-2'>
                   <input
-                    type="checkbox"
-                    id="replace-existing"
+                    type='checkbox'
+                    id='replace-existing'
                     checked={replaceExisting}
-                    onChange={(e) => setReplaceExisting(e.target.checked)}
+                    onChange={e => setReplaceExisting(e.target.checked)}
                   />
-                  <Label htmlFor="replace-existing" className="text-sm">
+                  <Label htmlFor='replace-existing' className='text-sm'>
                     Replace existing pricing data
                   </Label>
                 </div>
-                <div className="flex space-x-2">
+                <div className='flex space-x-2'>
                   <Button
                     onClick={() => handleImport('csv')}
                     disabled={isImporting || !csvData.trim()}
-                    className="flex-1"
+                    className='flex-1'
                   >
                     {isImporting ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <RefreshCw className='w-4 h-4 mr-2 animate-spin' />
                     ) : (
-                      <Upload className="w-4 h-4 mr-2" />
+                      <Upload className='w-4 h-4 mr-2' />
                     )}
                     Import CSV
                   </Button>
                   <Button
                     onClick={downloadSampleCSV}
-                    variant="outline"
-                    className="flex-1"
+                    variant='outline'
+                    className='flex-1'
                   >
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className='w-4 h-4 mr-2' />
                     Download Template
                   </Button>
                 </div>
@@ -176,53 +191,64 @@ export default function PricingManagementPage() {
             </CardHeader>
             <CardContent>
               {!importResult ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Upload className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <div className='text-center py-8 text-gray-500'>
+                  <Upload className='w-12 h-12 mx-auto mb-4 text-gray-300' />
                   <p>No import results yet</p>
-                  <p className="text-sm">Import pricing data to see results here</p>
+                  <p className='text-sm'>
+                    Import pricing data to see results here
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className='space-y-4'>
                   {/* Success/Error Status */}
-                  <div className="flex items-center space-x-2">
+                  <div className='flex items-center space-x-2'>
                     {importResult.success ? (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <CheckCircle className='w-5 h-5 text-green-500' />
                     ) : (
-                      <XCircle className="w-5 h-5 text-red-500" />
+                      <XCircle className='w-5 h-5 text-red-500' />
                     )}
-                    <span className={`font-semibold ${
-                      importResult.success ? 'text-green-700' : 'text-red-700'
-                    }`}>
-                      {importResult.success ? 'Import Successful' : 'Import Failed'}
+                    <span
+                      className={`font-semibold ${
+                        importResult.success ? 'text-green-700' : 'text-red-700'
+                      }`}
+                    >
+                      {importResult.success
+                        ? 'Import Successful'
+                        : 'Import Failed'}
                     </span>
                   </div>
 
                   {/* Import Stats */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-700">
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='text-center p-3 bg-green-50 rounded-lg'>
+                      <div className='text-2xl font-bold text-green-700'>
                         {importResult.imported}
                       </div>
-                      <div className="text-sm text-green-600">Items Imported</div>
+                      <div className='text-sm text-green-600'>
+                        Items Imported
+                      </div>
                     </div>
-                    <div className="text-center p-3 bg-red-50 rounded-lg">
-                      <div className="text-2xl font-bold text-red-700">
+                    <div className='text-center p-3 bg-red-50 rounded-lg'>
+                      <div className='text-2xl font-bold text-red-700'>
                         {importResult.errors.length}
                       </div>
-                      <div className="text-sm text-red-600">Errors</div>
+                      <div className='text-sm text-red-600'>Errors</div>
                     </div>
                   </div>
 
                   {/* Errors */}
                   {importResult.errors.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-red-700 flex items-center">
-                        <XCircle className="w-4 h-4 mr-2" />
+                    <div className='space-y-2'>
+                      <h4 className='font-semibold text-red-700 flex items-center'>
+                        <XCircle className='w-4 h-4 mr-2' />
                         Errors
                       </h4>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                      <div className='space-y-1 max-h-32 overflow-y-auto'>
                         {importResult.errors.map((error, index) => (
-                          <div key={index} className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                          <div
+                            key={index}
+                            className='text-sm text-red-600 bg-red-50 p-2 rounded'
+                          >
                             {error}
                           </div>
                         ))}
@@ -232,14 +258,17 @@ export default function PricingManagementPage() {
 
                   {/* Warnings */}
                   {importResult.warnings.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-yellow-700 flex items-center">
-                        <AlertCircle className="w-4 h-4 mr-2" />
+                    <div className='space-y-2'>
+                      <h4 className='font-semibold text-yellow-700 flex items-center'>
+                        <AlertCircle className='w-4 h-4 mr-2' />
                         Warnings
                       </h4>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                      <div className='space-y-1 max-h-32 overflow-y-auto'>
                         {importResult.warnings.map((warning, index) => (
-                          <div key={index} className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">
+                          <div
+                            key={index}
+                            className='text-sm text-yellow-600 bg-yellow-50 p-2 rounded'
+                          >
                             {warning}
                           </div>
                         ))}
@@ -253,34 +282,36 @@ export default function PricingManagementPage() {
         </div>
 
         {/* Instructions */}
-        <Card className="mt-6">
+        <Card className='mt-6'>
           <CardHeader>
             <CardTitle>How to Import Your Pricing</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className='space-y-4'>
               <div>
-                <h3 className="font-semibold mb-2">1. Prepare Your Excel/CSV File</h3>
-                <p className="text-sm text-gray-600 mb-2">
+                <h3 className='font-semibold mb-2'>
+                  1. Prepare Your Excel/CSV File
+                </h3>
+                <p className='text-sm text-gray-600 mb-2'>
                   Your file should have these columns (in order):
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                  <Badge variant="outline">Name</Badge>
-                  <Badge variant="outline">Category</Badge>
-                  <Badge variant="outline">Price</Badge>
-                  <Badge variant="outline">Description</Badge>
-                  <Badge variant="outline">Minutes</Badge>
-                  <Badge variant="outline">IsCustom</Badge>
-                  <Badge variant="outline">Icon</Badge>
+                <div className='grid grid-cols-2 md:grid-cols-4 gap-2 text-sm'>
+                  <Badge variant='outline'>Name</Badge>
+                  <Badge variant='outline'>Category</Badge>
+                  <Badge variant='outline'>Price</Badge>
+                  <Badge variant='outline'>Description</Badge>
+                  <Badge variant='outline'>Minutes</Badge>
+                  <Badge variant='outline'>IsCustom</Badge>
+                  <Badge variant='outline'>Icon</Badge>
                 </div>
               </div>
-              
+
               <div>
-                <h3 className="font-semibold mb-2">2. Categories</h3>
-                <p className="text-sm text-gray-600 mb-2">
+                <h3 className='font-semibold mb-2'>2. Categories</h3>
+                <p className='text-sm text-gray-600 mb-2'>
                   Use these standard categories:
                 </p>
-                <div className="flex flex-wrap gap-2 text-sm">
+                <div className='flex flex-wrap gap-2 text-sm'>
                   <Badge>hemming</Badge>
                   <Badge>waist</Badge>
                   <Badge>sleeves</Badge>
@@ -292,9 +323,10 @@ export default function PricingManagementPage() {
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">3. Price Format</h3>
-                <p className="text-sm text-gray-600">
-                  Enter prices in dollars (e.g., 15.00 for $15.00). The system will automatically convert to cents.
+                <h3 className='font-semibold mb-2'>3. Price Format</h3>
+                <p className='text-sm text-gray-600'>
+                  Enter prices in dollars (e.g., 15.00 for $15.00). The system
+                  will automatically convert to cents.
                 </p>
               </div>
             </div>
@@ -302,5 +334,5 @@ export default function PricingManagementPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
