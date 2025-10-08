@@ -117,34 +117,25 @@ export async function GET(
 
     // Process garments with their services
     const processedGarments =
-      garments?.map((garment: any) => {
-        console.log('🔍 Order Details API: Processing garment:', {
-          id: garment.id,
-          type: garment.type,
-          photo_path: garment.photo_path,
-          hasPhotoPath: !!garment.photo_path,
-        });
-
-        return {
-          id: garment.id,
-          type: garment.type,
-          color: garment.color,
-          brand: garment.brand,
-          notes: garment.notes,
-          label_code: garment.label_code,
-          photo_path: garment.photo_path,
-          measurements: garment.measurements,
-          garment_type: garment.garment_type,
-          services:
-            garment.garment_service?.map((gs: any, index: number) => ({
-              id: `gs-${index}`, // Generate a temporary ID
-              quantity: gs.quantity,
-              custom_price_cents: gs.custom_price_cents,
-              notes: gs.notes,
-              service: gs.service,
-            })) || [],
-        };
-      }) || [];
+      garments?.map((garment: any) => ({
+        id: garment.id,
+        type: garment.type,
+        color: garment.color,
+        brand: garment.brand,
+        notes: garment.notes,
+        label_code: garment.label_code,
+        photo_path: garment.photo_path,
+        measurements: garment.measurements,
+        garment_type: garment.garment_type,
+        services:
+          garment.garment_service?.map((gs: any, index: number) => ({
+            id: `gs-${index}`, // Generate a temporary ID
+            quantity: gs.quantity,
+            custom_price_cents: gs.custom_price_cents,
+            notes: gs.notes,
+            service: gs.service,
+          })) || [],
+      })) || [];
 
     // Flatten all services for easy access
     const allServices = processedGarments.flatMap(garment =>

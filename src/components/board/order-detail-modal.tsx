@@ -236,13 +236,6 @@ export function OrderDetailModal({
                       {/* Garment Photos */}
                       {garment.photo_path && (
                         <div className='mb-3'>
-                          {console.log(
-                            '🔍 Modal: Displaying photo for garment:',
-                            {
-                              garmentType: garment.type,
-                              photoPath: garment.photo_path,
-                            }
-                          )}
                           <PhotoGallery
                             photos={[
                               {
@@ -258,11 +251,6 @@ export function OrderDetailModal({
                       )}
                       {!garment.photo_path && (
                         <div className='mb-3 text-sm text-gray-500'>
-                          {console.log('🔍 Modal: No photo_path for garment:', {
-                            garmentType: garment.type,
-                            garmentId: garment.id,
-                            hasPhotoPath: !!garment.photo_path,
-                          })}
                           No photo available
                         </div>
                       )}
