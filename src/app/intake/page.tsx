@@ -31,7 +31,7 @@ interface IntakeFormData {
   client: {
     first_name: string;
     last_name: string;
-    phone?: string;
+    phone: string; // Now required
     email?: string;
     language: 'fr' | 'en';
     newsletter_consent: boolean;
@@ -157,10 +157,7 @@ export default function IntakePage() {
     fileName: string
   ): Promise<string> => {
     try {
-      // Convert data URL to blob
-      const response = await fetch(photoDataUrl);
-      await response.blob();
-
+      console.log('📸 Uploading photo:', fileName);
       // Upload to Supabase Storage
       const uploadResponse = await fetch('/api/upload-photo', {
         method: 'POST',
@@ -201,18 +198,29 @@ export default function IntakePage() {
 
     try {
       // Upload photos first
+      console.log(
+        '📸 Processing garments for photo upload:',
+        formData.garments.length
+      );
       const garmentsWithUploadedPhotos = await Promise.all(
         formData.garments.map(async garment => {
+          console.log('📸 Garment photo data:', {
+            hasPhotoDataUrl: !!garment.photoDataUrl,
+            hasPhotoFileName: !!garment.photoFileName,
+            fileName: garment.photoFileName,
+          });
           if (garment.photoDataUrl && garment.photoFileName) {
             const photoPath = await uploadPhoto(
               garment.photoDataUrl,
               garment.photoFileName
             );
+            console.log('📸 Photo uploaded successfully:', photoPath);
             return {
               ...garment,
               photoPath,
             };
           }
+          console.log('📸 No photo to upload for garment:', garment.type);
           return garment;
         })
       );
@@ -232,7 +240,7 @@ export default function IntakePage() {
           color: garment.color,
           brand: garment.brand,
           notes: garment.notes,
-          photoTempPath: garment.photoPath,
+          photo_path: garment.photoPath,
           services: garment.services,
         })),
         notes: formData.notes,

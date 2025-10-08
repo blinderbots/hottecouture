@@ -1,29 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '../../../../../lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server';
+import { createServiceRoleClient } from '../../../../../lib/supabase/server';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createServiceRoleClient()
-    const orderId = params.id
-    
-    console.log('🔍 Order Details API: Looking for order ID:', orderId)
+    const supabase = await createServiceRoleClient();
+    const orderId = params.id;
+
+    console.log('🔍 Order Details API: Looking for order ID:', orderId);
 
     // First, let's check if the order exists with a simple query
     const { data: simpleOrder, error: simpleError } = await supabase
       .from('order')
       .select('id, order_number')
       .eq('id', orderId)
-      .single()
-    
-    console.log('🔍 Order Details API: Simple query result:', { simpleOrder, simpleError })
+      .single();
+
+    console.log('🔍 Order Details API: Simple query result:', {
+      simpleOrder,
+      simpleError,
+    });
 
     // Get order with basic information
     const { data: order, error: orderError } = await supabase
       .from('order')
-      .select(`
+      .select(
+        `
         id,
         order_number,
         type,
@@ -50,21 +54,29 @@ export async function GET(
           language,
           notes
         )
-      `)
+      `
+      )
       .eq('id', orderId)
-      .single()
+      .single();
 
     if (orderError || !order) {
-      console.log('❌ Order Details API: Order not found', { orderError, order })
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      console.log('❌ Order Details API: Order not found', {
+        orderError,
+        order,
+      });
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
-    
-    console.log('✅ Order Details API: Found order', { order_number: (order as any).order_number, client_name: (order as any).client?.first_name })
+
+    console.log('✅ Order Details API: Found order', {
+      order_number: (order as any).order_number,
+      client_name: (order as any).client?.first_name,
+    });
 
     // Get garments for this order
     const { data: garments, error: garmentsError } = await supabase
       .from('garment')
-      .select(`
+      .select(
+        `
         id,
         type,
         color,
@@ -93,67 +105,85 @@ export async function GET(
             estimated_minutes
           )
         )
-      `)
-      .eq('order_id', orderId)
+      `
+      )
+      .eq('order_id', orderId);
 
     if (garmentsError) {
-      console.error('Error fetching garments:', garmentsError)
+      console.error('Error fetching garments:', garmentsError);
     }
 
     // Tasks removed - garments with services provide all necessary work information
 
     // Process garments with their services
-    const processedGarments = garments?.map((garment: any) => ({
-      id: garment.id,
-      type: garment.type,
-      color: garment.color,
-      brand: garment.brand,
-      notes: garment.notes,
-      label_code: garment.label_code,
-      photo_path: garment.photo_path,
-      measurements: garment.measurements,
-      garment_type: garment.garment_type,
-      services: garment.garment_service?.map((gs: any, index: number) => ({
-        id: `gs-${index}`, // Generate a temporary ID
-        quantity: gs.quantity,
-        custom_price_cents: gs.custom_price_cents,
-        notes: gs.notes,
-        service: gs.service
-      })) || []
-    })) || []
+    const processedGarments =
+      garments?.map((garment: any) => {
+        console.log('🔍 Order Details API: Processing garment:', {
+          id: garment.id,
+          type: garment.type,
+          photo_path: garment.photo_path,
+          hasPhotoPath: !!garment.photo_path,
+        });
+
+        return {
+          id: garment.id,
+          type: garment.type,
+          color: garment.color,
+          brand: garment.brand,
+          notes: garment.notes,
+          label_code: garment.label_code,
+          photo_path: garment.photo_path,
+          measurements: garment.measurements,
+          garment_type: garment.garment_type,
+          services:
+            garment.garment_service?.map((gs: any, index: number) => ({
+              id: `gs-${index}`, // Generate a temporary ID
+              quantity: gs.quantity,
+              custom_price_cents: gs.custom_price_cents,
+              notes: gs.notes,
+              service: gs.service,
+            })) || [],
+        };
+      }) || [];
 
     // Flatten all services for easy access
-    const allServices = processedGarments.flatMap(garment => 
+    const allServices = processedGarments.flatMap(garment =>
       garment.services.map((service: any) => ({
         ...service,
         garment_type: garment.type,
-        garment_label: garment.label_code
+        garment_label: garment.label_code,
       }))
-    )
-
+    );
 
     // Safely handle client data
-    let client_name = 'Unknown Client'
-    if ((order as any).client && (order as any).client.first_name && (order as any).client.last_name) {
-      client_name = `${(order as any).client.first_name} ${(order as any).client.last_name}`
+    let client_name = 'Unknown Client';
+    if (
+      (order as any).client &&
+      (order as any).client.first_name &&
+      (order as any).client.last_name
+    ) {
+      client_name = `${(order as any).client.first_name} ${(order as any).client.last_name}`;
     } else if ((order as any).client && (order as any).client.first_name) {
-      client_name = (order as any).client.first_name
+      client_name = (order as any).client.first_name;
     }
 
-    const client_notes = (order as any).client?.notes || null
+    const client_notes = (order as any).client?.notes || null;
 
     // Calculate estimated time from services
-    const totalEstimatedMinutes = allServices.reduce((sum: number, service: any) => {
-      const serviceMinutes = service.service?.estimated_minutes || 60
-      return sum + (serviceMinutes * service.quantity)
-    }, 0)
-    
+    const totalEstimatedMinutes = allServices.reduce(
+      (sum: number, service: any) => {
+        const serviceMinutes = service.service?.estimated_minutes || 60;
+        return sum + serviceMinutes * service.quantity;
+      },
+      0
+    );
+
     // Format time helper
     const formatTime = (minutes: number): string => {
-      const hours = Math.floor(minutes / 60)
-      const mins = minutes % 60
-      return `${hours}h ${mins}m`
-    }
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hours}h ${mins}m`;
+    };
 
     const detailedOrder = {
       ...(order as any),
@@ -168,24 +198,30 @@ export async function GET(
       time_tracking: {
         total_estimated_minutes: totalEstimatedMinutes,
         total_actual_minutes: (order as any).actual_work_minutes || 0,
-        is_tracking: (order as any).status === 'working' && (order as any).work_started_at,
+        is_tracking:
+          (order as any).status === 'working' && (order as any).work_started_at,
         estimated_time: formatTime(totalEstimatedMinutes),
-        actual_time: formatTime((order as any).actual_work_minutes || 0)
+        actual_time: formatTime((order as any).actual_work_minutes || 0),
       },
       // Notes (parse if it's JSON string)
-      notes: typeof (order as any).notes === 'string' ? JSON.parse((order as any).notes || '{}') : (order as any).notes || {}
-    }
+      notes:
+        typeof (order as any).notes === 'string'
+          ? JSON.parse((order as any).notes || '{}')
+          : (order as any).notes || {},
+    };
 
-    return NextResponse.json({ 
-      success: true, 
-      order: detailedOrder
-    })
-
+    return NextResponse.json({
+      success: true,
+      order: detailedOrder,
+    });
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    console.error('API error:', error);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }

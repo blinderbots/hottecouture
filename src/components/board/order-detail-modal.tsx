@@ -236,17 +236,34 @@ export function OrderDetailModal({
                       {/* Garment Photos */}
                       {garment.photo_path && (
                         <div className='mb-3'>
+                          {console.log(
+                            '🔍 Modal: Displaying photo for garment:',
+                            {
+                              garmentType: garment.type,
+                              photoPath: garment.photo_path,
+                            }
+                          )}
                           <PhotoGallery
                             photos={[
                               {
                                 id: garment.id,
-                                url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/photos/${garment.photo_path}`,
+                                url: `/api/photo/${garment.photo_path}`,
                                 alt: garment.type,
                                 caption: `Label: ${garment.label_code}`,
                               },
                             ]}
                             className='w-48'
                           />
+                        </div>
+                      )}
+                      {!garment.photo_path && (
+                        <div className='mb-3 text-sm text-gray-500'>
+                          {console.log('🔍 Modal: No photo_path for garment:', {
+                            garmentType: garment.type,
+                            garmentId: garment.id,
+                            hasPhotoPath: !!garment.photo_path,
+                          })}
+                          No photo available
                         </div>
                       )}
 

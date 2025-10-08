@@ -9,16 +9,16 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Create storage policies for photos bucket
 CREATE POLICY "Authenticated users can upload photos" ON storage.objects
-FOR INSERT WITH CHECK (bucket_id = 'photos' AND auth.role() = 'authenticated');
+FOR INSERT WITH CHECK (bucket_id = 'photos' AND (auth.role() = 'authenticated' OR auth.role() = 'service_role'));
 
 CREATE POLICY "Authenticated users can view photos" ON storage.objects
-FOR SELECT USING (bucket_id = 'photos' AND auth.role() = 'authenticated');
+FOR SELECT USING (bucket_id = 'photos' AND (auth.role() = 'authenticated' OR auth.role() = 'service_role'));
 
 CREATE POLICY "Authenticated users can update photos" ON storage.objects
-FOR UPDATE USING (bucket_id = 'photos' AND auth.role() = 'authenticated');
+FOR UPDATE USING (bucket_id = 'photos' AND (auth.role() = 'authenticated' OR auth.role() = 'service_role'));
 
 CREATE POLICY "Authenticated users can delete photos" ON storage.objects
-FOR DELETE USING (bucket_id = 'photos' AND auth.role() = 'authenticated');
+FOR DELETE USING (bucket_id = 'photos' AND (auth.role() = 'authenticated' OR auth.role() = 'service_role'));
 
 -- Create storage policies for labels bucket
 CREATE POLICY "Authenticated users can upload labels" ON storage.objects
