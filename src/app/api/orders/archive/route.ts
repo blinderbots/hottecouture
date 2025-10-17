@@ -45,11 +45,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Archive the orders (using status only for now)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('order')
       .update({
         status: 'archived',
-      } as any)
+      })
       .in('id', targetOrderIds)
       .select('id, order_number');
 
