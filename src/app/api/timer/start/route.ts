@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Start the timer
     const now = new Date().toISOString();
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('order')
       .update({
         is_timer_running: true,
