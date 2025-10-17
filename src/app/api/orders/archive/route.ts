@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     console.log(
       `✅ Archived ${data.length} orders:`,
-      data.map(o => `#${o.order_number}`)
+      data.map((o: any) => `#${o.order_number}`)
     );
 
     return NextResponse.json({
