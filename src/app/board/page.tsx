@@ -59,11 +59,6 @@ export default function BoardPage() {
     }
   };
 
-  const handleForceReload = () => {
-    console.log('🔄 Force page reload triggered');
-    window.location.reload();
-  };
-
   useEffect(() => {
     // Clear orders state first to ensure we start fresh
     setOrders([]);
