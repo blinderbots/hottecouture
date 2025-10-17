@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (!orderData.is_timer_running) {
+    if (!(orderData as any).is_timer_running) {
       return NextResponse.json(
         { error: 'Timer is not running for this order' },
         { status: 400 }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate time elapsed since last start
-    const startTime = new Date(orderData.timer_started_at);
+    const startTime = new Date((orderData as any).timer_started_at);
     const pauseTime = new Date();
     const elapsedSeconds = Math.floor(
       (pauseTime.getTime() - startTime.getTime()) / 1000
@@ -56,11 +56,11 @@ export async function POST(request: NextRequest) {
     // Add elapsed time to total work seconds (ensure non-negative)
     const newTotalSeconds = Math.max(
       0,
-      (orderData.total_work_seconds || 0) + safeElapsedSeconds
+      ((orderData as any).total_work_seconds || 0) + safeElapsedSeconds
     );
 
     // Pause the timer
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('order')
       .update({
         is_timer_running: false,
