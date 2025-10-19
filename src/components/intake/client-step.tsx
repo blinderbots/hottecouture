@@ -585,7 +585,7 @@ export function ClientStep({
                   variant='outline'
                   size='sm'
                   onClick={() => {
-                    onUpdate(null);
+                    // Reset form without updating client
                     setShowCreateForm(false);
                     setSearchQuery('');
                     setSearchResults([]);
