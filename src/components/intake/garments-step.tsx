@@ -2,13 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { CameraCapture } from '@/components/intake/camera-capture';
 import { nanoid } from 'nanoid';
 
@@ -19,6 +13,7 @@ interface GarmentType {
   category: string;
   icon: string;
   is_common: boolean;
+  is_active?: boolean;
 }
 
 interface Garment {
@@ -173,254 +168,338 @@ export function GarmentsStep({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Add Garments</CardTitle>
-        <CardDescription>
-          Add garments that need alterations or custom work
-        </CardDescription>
-      </CardHeader>
-      <CardContent className='space-y-6'>
-        {!showAddForm ? (
-          <Button
-            onClick={() => setShowAddForm(true)}
-            className='w-full btn-press bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300'
+    <div className='h-full flex flex-col overflow-hidden min-h-0'>
+      {/* iOS-style Header with Navigation */}
+      <div className='flex items-center justify-between px-1 py-3 border-b border-gray-200 bg-white flex-shrink-0'>
+        <Button
+          variant='ghost'
+          onClick={onPrev}
+          className='flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200'
+        >
+          <svg
+            className='w-4 h-4'
+            fill='none'
+            stroke='currentColor'
+            viewBox='0 0 24 24'
           >
-            Add Garment
-          </Button>
-        ) : (
-          <div className='space-y-4 p-4 border border-gray-200 rounded-lg'>
-            <div>
-              <label
-                htmlFor='garmentType'
-                className='block text-sm font-medium mb-1'
-              >
-                Garment Type *
-              </label>
-              <select
-                id='garmentType'
-                value={currentGarment.garment_type_id || ''}
-                onChange={e => handleGarmentTypeChange(e.target.value)}
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                required
-              >
-                <option value=''>Select garment type</option>
-                {Object.entries(groupedTypes).map(([category, types]) => (
-                  <optgroup key={category} label={category}>
-                    {types.map(type => (
-                      <option key={type.id} value={type.id}>
-                        {type.icon} {type.name}
-                      </option>
+            <path
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth={2}
+              d='M15 19l-7-7 7-7'
+            />
+          </svg>
+          <span className='font-medium'>Previous</span>
+        </Button>
+
+        <div className='flex-1 text-center'>
+          <h2 className='text-lg font-semibold text-gray-900'>Add Garments</h2>
+          <p className='text-sm text-gray-500'>
+            Add garments that need alterations or custom work
+          </p>
+        </div>
+
+        <Button
+          onClick={onNext}
+          disabled={data.length === 0}
+          className='bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+        >
+          Next
+        </Button>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className='flex-1 overflow-y-auto min-h-0'>
+        <div className='p-4 space-y-4'>
+          {!showAddForm ? (
+            <Button
+              onClick={() => setShowAddForm(true)}
+              className='w-full btn-press bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm py-2'
+            >
+              Add Garment
+            </Button>
+          ) : (
+            <div className='space-y-3 p-3 border border-gray-200 rounded-lg'>
+              <div>
+                <label
+                  htmlFor='garmentType'
+                  className='block text-sm font-medium mb-1'
+                >
+                  Garment Type *
+                </label>
+                <div className='relative'>
+                  <select
+                    id='garmentType'
+                    value={currentGarment.garment_type_id || ''}
+                    onChange={e => handleGarmentTypeChange(e.target.value)}
+                    className='w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none cursor-pointer transition-all duration-200 hover:border-gray-400 touch-manipulation min-h-[40px]'
+                    required
+                  >
+                    <option value=''>Choose a garment type...</option>
+                    {Object.entries(groupedTypes).map(([category, types]) => (
+                      <optgroup
+                        key={category}
+                        label={
+                          category.charAt(0).toUpperCase() +
+                          category.slice(1).replace('_', ' ')
+                        }
+                        className='font-semibold text-gray-700'
+                      >
+                        {types
+                          .filter(type => type.is_active !== false)
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map(type => (
+                            <option
+                              key={type.id}
+                              value={type.id}
+                              className='py-2'
+                            >
+                              {type.icon} {type.name}
+                            </option>
+                          ))}
+                      </optgroup>
                     ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor='labelCode'
-                className='block text-sm font-medium mb-1'
-              >
-                Label Code
-              </label>
-              <input
-                id='labelCode'
-                type='text'
-                value={currentGarment.labelCode}
-                readOnly
-                className='w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600'
-                placeholder='Auto-generated'
-              />
-              <p className='text-xs text-gray-500 mt-1'>
-                This code will be used to identify the garment
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor='garmentNotes'
-                className='block text-sm font-medium mb-1'
-              >
-                Notes
-              </label>
-              <textarea
-                id='garmentNotes'
-                value={currentGarment.notes}
-                onChange={e => updateGarmentField('notes', e.target.value)}
-                rows={3}
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Special instructions, damage notes, etc.'
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium mb-2'>Photo</label>
-              <div className='space-y-3'>
-                {currentGarment.photoPath || currentGarment.photoDataUrl ? (
-                  <div className='grid grid-cols-2 gap-4'>
-                    {/* Photo on the left - 50% width */}
-                    <div className='h-32 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden'>
-                      {currentGarment.photoDataUrl ? (
-                        <img
-                          src={currentGarment.photoDataUrl}
-                          alt='Garment photo'
-                          className='w-full h-full object-cover'
-                        />
-                      ) : (
-                        <span className='text-sm text-gray-600'>📷</span>
-                      )}
-                    </div>
-                    {/* Text and button on the right - 50% width */}
-                    <div className='space-y-3'>
-                      <div className='text-sm text-gray-600'>
-                        Photo captured successfully
-                      </div>
-                      <div className='text-xs text-gray-500'>
-                        Click remove to take a new photo
-                      </div>
-                      <div className='flex gap-2'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() =>
-                            setCurrentGarment(prev => {
-                              const {
-                                photoPath,
-                                photoDataUrl,
-                                photoFileName,
-                                ...rest
-                              } = prev;
-                              return rest;
-                            })
-                          }
-                          className='btn-press bg-gradient-to-r from-red-100 to-red-200 hover:from-red-200 hover:to-red-300 text-red-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-red-300'
-                        >
-                          Remove Photo
-                        </Button>
-                      </div>
-                    </div>
+                  </select>
+                  <div className='absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none'>
+                    <svg
+                      className='w-5 h-5 text-gray-400'
+                      fill='none'
+                      stroke='currentColor'
+                      viewBox='0 0 24 24'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M19 9l-7 7-7-7'
+                      />
+                    </svg>
                   </div>
-                ) : (
-                  <div className='border-2 border-dashed border-gray-300 rounded-lg p-6'>
-                    <CameraCapture
-                      onCapture={handlePhotoCapture}
-                      onCancel={() => {}}
-                    />
+                </div>
+                {currentGarment.garment_type_id && (
+                  <div className='mt-1 text-xs text-green-600 flex items-center'>
+                    <svg
+                      className='w-3 h-3 mr-1'
+                      fill='currentColor'
+                      viewBox='0 0 20 20'
+                    >
+                      <path
+                        fillRule='evenodd'
+                        d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                        clipRule='evenodd'
+                      />
+                    </svg>
+                    Garment type selected
                   </div>
-                )}
-                {uploadError && (
-                  <div className='text-red-600 text-sm'>{uploadError}</div>
                 )}
               </div>
-            </div>
 
-            <div className='flex gap-3'>
-              <Button
-                onClick={addGarment}
-                disabled={
-                  !currentGarment.type || !currentGarment.garment_type_id
-                }
-                className='flex-1 btn-press bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed'
-              >
-                Add Garment
-              </Button>
-              <Button
-                variant='outline'
-                onClick={() => setShowAddForm(false)}
-                className='flex-1 btn-press bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-gray-300'
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
+              <div>
+                <label
+                  htmlFor='labelCode'
+                  className='block text-xs font-medium mb-1'
+                >
+                  Label Code
+                </label>
+                <input
+                  id='labelCode'
+                  type='text'
+                  value={currentGarment.labelCode}
+                  readOnly
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 min-h-[36px] text-sm'
+                  placeholder='Auto-generated'
+                />
+                <p className='text-xs text-gray-500 mt-1'>
+                  This code will be used to identify the garment
+                </p>
+              </div>
 
-        {data.length > 0 && (
-          <div className='space-y-3'>
-            <h3 className='font-medium'>Added Garments ({data.length})</h3>
-            {data.map((garment, index) => {
-              const isEven = index % 2 === 0;
-              return (
-                <div key={index} className='p-4 bg-gray-50 rounded-lg'>
-                  <div
-                    className={`grid grid-cols-2 gap-4 ${!isEven ? 'grid-flow-col-dense' : ''}`}
-                  >
-                    {/* Photo - 50% width */}
-                    <div
-                      className={`h-24 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden ${!isEven ? 'order-2' : ''}`}
-                    >
-                      {garment.photoPath || garment.photoDataUrl ? (
-                        garment.photoDataUrl ? (
+              <div>
+                <label
+                  htmlFor='garmentNotes'
+                  className='block text-xs font-medium mb-1'
+                >
+                  Notes
+                </label>
+                <textarea
+                  id='garmentNotes'
+                  value={currentGarment.notes}
+                  onChange={e => updateGarmentField('notes', e.target.value)}
+                  rows={2}
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[60px] text-sm touch-manipulation'
+                  placeholder='Special instructions, damage notes, etc.'
+                />
+              </div>
+
+              <div>
+                <label className='block text-xs font-medium mb-1'>Photo</label>
+                <div className='space-y-2'>
+                  {currentGarment.photoPath || currentGarment.photoDataUrl ? (
+                    <div className='grid grid-cols-2 gap-3'>
+                      {/* Photo on the left - 50% width */}
+                      <div className='h-24 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden'>
+                        {currentGarment.photoDataUrl ? (
                           <img
-                            src={garment.photoDataUrl}
+                            src={currentGarment.photoDataUrl}
                             alt='Garment photo'
                             className='w-full h-full object-cover'
                           />
                         ) : (
                           <span className='text-xs text-gray-600'>📷</span>
-                        )
-                      ) : (
-                        <span className='text-xs text-gray-500'>No Photo</span>
-                      )}
+                        )}
+                      </div>
+                      {/* Text and button on the right - 50% width */}
+                      <div className='space-y-2'>
+                        <div className='text-xs text-gray-600'>
+                          Photo captured successfully
+                        </div>
+                        <div className='text-xs text-gray-500'>
+                          Click remove to take a new photo
+                        </div>
+                        <div className='flex gap-2'>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() =>
+                              setCurrentGarment(prev => {
+                                const {
+                                  photoPath,
+                                  photoDataUrl,
+                                  photoFileName,
+                                  ...rest
+                                } = prev;
+                                return rest;
+                              })
+                            }
+                            className='btn-press bg-gradient-to-r from-red-100 to-red-200 hover:from-red-200 hover:to-red-300 text-red-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-red-300 text-xs px-2 py-1'
+                          >
+                            Remove Photo
+                          </Button>
+                        </div>
+                      </div>
                     </div>
+                  ) : (
+                    <div className='border-2 border-dashed border-gray-300 rounded-lg p-4'>
+                      <CameraCapture
+                        onCapture={handlePhotoCapture}
+                        onCancel={() => {}}
+                      />
+                    </div>
+                  )}
+                  {uploadError && (
+                    <div className='text-red-600 text-xs'>{uploadError}</div>
+                  )}
+                </div>
+              </div>
 
-                    {/* Text content - 50% width */}
-                    <div className={`space-y-2 ${!isEven ? 'order-1' : ''}`}>
-                      <div className='font-medium text-gray-900'>
-                        {garment.type}
+              <div className='flex gap-2'>
+                <Button
+                  onClick={addGarment}
+                  disabled={
+                    !currentGarment.type || !currentGarment.garment_type_id
+                  }
+                  className='flex-1 btn-press bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm py-2'
+                >
+                  Add Garment
+                </Button>
+                <Button
+                  variant='outline'
+                  onClick={() => setShowAddForm(false)}
+                  className='flex-1 btn-press bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-gray-300 text-sm py-2'
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {data.length > 0 && (
+            <div className='space-y-2'>
+              <h3 className='font-medium text-sm'>
+                Added Garments ({data.length})
+              </h3>
+              {data.map((garment, index) => {
+                const isEven = index % 2 === 0;
+                return (
+                  <div key={index} className='p-3 bg-gray-50 rounded-lg'>
+                    <div
+                      className={`grid grid-cols-2 gap-3 ${!isEven ? 'grid-flow-col-dense' : ''}`}
+                    >
+                      {/* Photo - 50% width */}
+                      <div
+                        className={`h-20 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden ${!isEven ? 'order-2' : ''}`}
+                      >
+                        {garment.photoPath || garment.photoDataUrl ? (
+                          garment.photoDataUrl ? (
+                            <img
+                              src={garment.photoDataUrl}
+                              alt='Garment photo'
+                              className='w-full h-full object-cover'
+                            />
+                          ) : (
+                            <span className='text-xs text-gray-600'>📷</span>
+                          )
+                        ) : (
+                          <span className='text-xs text-gray-500'>
+                            No Photo
+                          </span>
+                        )}
                       </div>
-                      <div className='text-sm text-gray-600'>
-                        Label: {garment.labelCode}
-                      </div>
-                      {garment.color && (
-                        <div className='text-sm text-gray-500'>
-                          Color: {garment.color}
+
+                      {/* Text content - 50% width */}
+                      <div className={`space-y-1 ${!isEven ? 'order-1' : ''}`}>
+                        <div className='flex items-center space-x-2'>
+                          {garment.garment_type_id && (
+                            <span className='text-sm'>
+                              {garmentTypes.find(
+                                gt => gt.id === garment.garment_type_id
+                              )?.icon || '👕'}
+                            </span>
+                          )}
+                          <div className='font-medium text-gray-900 text-sm'>
+                            {garment.type}
+                          </div>
                         </div>
-                      )}
-                      {garment.brand && (
-                        <div className='text-sm text-gray-500'>
-                          Brand: {garment.brand}
+                        <div className='text-xs text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded'>
+                          #{garment.labelCode}
                         </div>
-                      )}
-                      <div className='pt-2'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => removeGarment(index)}
-                          className='btn-press bg-gradient-to-r from-red-100 to-red-200 hover:from-red-200 hover:to-red-300 text-red-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-red-300'
-                        >
-                          Remove
-                        </Button>
+                        {garment.color && (
+                          <div className='text-xs text-gray-500'>
+                            <span className='font-medium'>Color:</span>{' '}
+                            {garment.color}
+                          </div>
+                        )}
+                        {garment.brand && (
+                          <div className='text-xs text-gray-500'>
+                            <span className='font-medium'>Brand:</span>{' '}
+                            {garment.brand}
+                          </div>
+                        )}
+                        {garment.notes && (
+                          <div className='text-xs text-gray-500 italic'>
+                            <span className='font-medium'>Notes:</span>{' '}
+                            {garment.notes}
+                          </div>
+                        )}
+                        <div className='pt-1'>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() => removeGarment(index)}
+                            className='btn-press bg-gradient-to-r from-red-100 to-red-200 hover:from-red-200 hover:to-red-300 text-red-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-red-300 text-xs px-2 py-1'
+                          >
+                            Remove
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Sticky Navigation - iPad 8 Optimized */}
-        <div className='sticky bottom-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-gray-200'>
-          <div className='flex justify-between gap-4'>
-            <Button
-              variant='outline'
-              onClick={onPrev}
-              className='btn-press flex-1 ipad:flex-none'
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={onNext}
-              disabled={data.length === 0}
-              className='btn-press bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex-1 ipad:flex-none'
-            >
-              Continue to Services →
-            </Button>
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

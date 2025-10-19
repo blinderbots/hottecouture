@@ -66,20 +66,12 @@ export default function HomePage() {
 
           {/* Hero Section */}
           <div className='text-center mb-16'>
-            <div className='inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl mb-8 shadow-lg animate-fade-in-up'>
-              <svg
-                className='w-10 h-10 text-white'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z'
-                />
-              </svg>
+            <div className='inline-flex items-center justify-center w-24 h-24 bg-white/90 backdrop-blur-sm rounded-3xl mb-8 shadow-lg animate-fade-in-up p-4'>
+              <img
+                src='/logo.jpg'
+                alt="Hotte Design D'Intérieur & Couture"
+                className='w-full h-full object-contain'
+              />
             </div>
             <h1 className='text-6xl md:text-7xl font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent mb-6 leading-tight animate-fade-in-up-delay-1'>
               Hotte Couture

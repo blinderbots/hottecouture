@@ -80,119 +80,168 @@ export function NotesStep({
   };
 
   return (
-    <div className='space-y-6'>
-      {/* Measurements */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Measurements</CardTitle>
-          <CardDescription>
-            Record any measurements or sizing information
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <textarea
-            value={data.measurements || ''}
-            onChange={e => handleInputChange('measurements', e.target.value)}
-            rows={6}
-            placeholder='Enter measurements, sizing notes, or any relevant details...'
-            className='w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent'
-          />
-        </CardContent>
-      </Card>
+    <div className='h-[calc(100vh-200px)] flex flex-col overflow-hidden'>
+      {/* iOS-style Header with Navigation */}
+      <div className='flex items-center justify-between px-1 py-3 border-b border-gray-200 bg-white flex-shrink-0'>
+        <Button
+          variant='ghost'
+          onClick={onPrev}
+          className='flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200'
+        >
+          <svg
+            className='w-4 h-4'
+            fill='none'
+            stroke='currentColor'
+            viewBox='0 0 24 24'
+          >
+            <path
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth={2}
+              d='M15 19l-7-7 7-7'
+            />
+          </svg>
+          <span className='font-medium'>Previous</span>
+        </Button>
 
-      {/* Special Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Special Instructions</CardTitle>
-          <CardDescription>
-            Any special instructions or requirements for this order
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <textarea
-            value={data.specialInstructions || ''}
-            onChange={e =>
-              handleInputChange('specialInstructions', e.target.value)
-            }
-            rows={4}
-            placeholder='Enter any special instructions, preferences, or requirements...'
-            className='w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent'
-          />
-        </CardContent>
-      </Card>
+        <div className='flex-1 text-center'>
+          <h2 className='text-lg font-semibold text-gray-900'>
+            Notes & Measurements
+          </h2>
+          <p className='text-sm text-gray-500'>
+            Measurements and special instructions
+          </p>
+        </div>
 
-      {/* Detailed Measurements */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Detailed Measurements</CardTitle>
-          <CardDescription>
-            Capture precise measurements for each garment
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className='space-y-4'>
-            {garments.length > 0 ? (
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {garments.map((garment, index) => {
-                  const existingMeasurement = data.detailedMeasurements?.find(
-                    m => m.garmentType === garment.type
-                  );
-                  const isMeasured =
-                    existingMeasurement &&
-                    existingMeasurement.points
-                      .filter(p => p.isRequired)
-                      .every(p => p.value !== undefined);
+        <Button
+          onClick={onNext}
+          className='bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200'
+        >
+          Next: Pricing →
+        </Button>
+      </div>
 
-                  return (
-                    <div
-                      key={garment.id || index}
-                      className='p-4 border rounded-lg hover:shadow-md transition-shadow'
-                    >
-                      <div className='flex items-center justify-between mb-2'>
-                        <h4 className='font-medium'>{garment.type}</h4>
-                        <div className='flex items-center space-x-2'>
-                          {isMeasured && (
-                            <span className='text-green-600 text-sm'>
-                              ✓ Measured
-                            </span>
+      {/* Scrollable Content Area */}
+      <div className='flex-1 overflow-y-auto'>
+        <div className='p-3 space-y-3'>
+          {/* Measurements */}
+          <Card>
+            <CardHeader className='pb-2'>
+              <CardTitle className='text-base'>Measurements</CardTitle>
+              <CardDescription className='text-xs'>
+                Record any measurements or sizing information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='pt-0'>
+              <textarea
+                value={data.measurements || ''}
+                onChange={e =>
+                  handleInputChange('measurements', e.target.value)
+                }
+                rows={1}
+                placeholder='Enter measurements, sizing notes, or any relevant details...'
+                className='w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-h-[40px] resize-none'
+              />
+            </CardContent>
+          </Card>
+
+          {/* Special Instructions */}
+          <Card>
+            <CardHeader className='pb-2'>
+              <CardTitle className='text-base'>Special Instructions</CardTitle>
+              <CardDescription className='text-xs'>
+                Any special instructions or requirements for this order
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='pt-0'>
+              <textarea
+                value={data.specialInstructions || ''}
+                onChange={e =>
+                  handleInputChange('specialInstructions', e.target.value)
+                }
+                rows={1}
+                placeholder='Enter any special instructions, preferences, or requirements...'
+                className='w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-h-[40px] resize-none'
+              />
+            </CardContent>
+          </Card>
+
+          {/* Detailed Measurements */}
+          <Card>
+            <CardHeader className='pb-2'>
+              <CardTitle className='text-base'>Detailed Measurements</CardTitle>
+              <CardDescription className='text-xs'>
+                Capture precise measurements for each garment
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='pt-0'>
+              <div className='space-y-2'>
+                {garments.length > 0 ? (
+                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
+                    {garments.map((garment, index) => {
+                      const existingMeasurement =
+                        data.detailedMeasurements?.find(
+                          m => m.garmentType === garment.type
+                        );
+                      const isMeasured =
+                        existingMeasurement &&
+                        existingMeasurement.points
+                          .filter(p => p.isRequired)
+                          .every(p => p.value !== undefined);
+
+                      return (
+                        <div
+                          key={garment.id || index}
+                          className='p-2 border rounded-lg hover:shadow-md transition-shadow'
+                        >
+                          <div className='flex items-center justify-between mb-1'>
+                            <h4 className='font-medium text-xs'>
+                              {garment.type}
+                            </h4>
+                            <div className='flex items-center space-x-1'>
+                              {isMeasured && (
+                                <span className='text-green-600 text-xs'>
+                                  ✓
+                                </span>
+                              )}
+                              <Button
+                                type='button'
+                                variant='outline'
+                                size='sm'
+                                onClick={() => handleStartMeasurement(garment)}
+                                className='btn-press bg-gradient-to-r from-blue-100 to-blue-200 hover:from-blue-200 hover:to-blue-300 text-blue-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-blue-300 text-xs px-2 py-1 h-6'
+                              >
+                                {existingMeasurement ? 'Edit' : 'Measure'}
+                              </Button>
+                            </div>
+                          </div>
+                          {existingMeasurement && (
+                            <div className='text-xs text-gray-600'>
+                              {
+                                existingMeasurement.points.filter(
+                                  p => p.value !== undefined
+                                ).length
+                              }
+                              /{existingMeasurement.points.length} measured
+                            </div>
                           )}
-                          <Button
-                            type='button'
-                            variant='outline'
-                            size='sm'
-                            onClick={() => handleStartMeasurement(garment)}
-                            className='btn-press bg-gradient-to-r from-blue-100 to-blue-200 hover:from-blue-200 hover:to-blue-300 text-blue-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-blue-300'
-                          >
-                            {existingMeasurement ? 'Edit' : 'Measure'}
-                          </Button>
                         </div>
-                      </div>
-                      {existingMeasurement && (
-                        <div className='text-sm text-gray-600'>
-                          {
-                            existingMeasurement.points.filter(
-                              p => p.value !== undefined
-                            ).length
-                          }{' '}
-                          of {existingMeasurement.points.length} measurements
-                          taken
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className='text-center py-4 text-gray-500'>
+                    <p className='text-xs'>
+                      No garments added yet. Please add garments in the previous
+                      step.
+                    </p>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className='text-center py-8 text-gray-500'>
-                <p>
-                  No garments added yet. Please add garments in the previous
-                  step.
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Measurement Capture Modal */}
       {showMeasurementCapture && selectedGarment && (
@@ -220,27 +269,6 @@ export function NotesStep({
           </div>
         </div>
       )}
-
-      {/* Sticky Navigation - iPad 8 Optimized */}
-      <div className='sticky bottom-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-gray-200'>
-        <div className='flex space-x-4'>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={onPrev}
-            className='flex-1 py-3 text-lg btn-press'
-          >
-            Previous
-          </Button>
-          <Button
-            type='button'
-            onClick={onNext}
-            className='flex-1 py-3 text-lg btn-press bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300'
-          >
-            Next: Pricing →
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

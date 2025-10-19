@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Square } from 'lucide-react';
 import { formatDetailedTime, getTimerState } from '@/lib/timer/timer-utils';
+import { LoadingLogo } from '@/components/ui/loading-logo';
 
 interface TimerButtonProps {
   orderId: string;
@@ -34,6 +35,15 @@ export function TimerButton({
 
   // Only show timer for orders in working status
   const shouldShowTimer = orderStatus === 'working';
+
+  // Debug logging
+  console.log('🕐 TimerButton Debug:', {
+    orderId,
+    orderStatus,
+    shouldShowTimer,
+    timerStatus: timerStatus ? 'loaded' : 'not loaded',
+    timestamp: new Date().toISOString(),
+  });
 
   // Update current time every second when timer is running
   useEffect(() => {
@@ -171,8 +181,8 @@ export function TimerButton({
   // Don't show timer if status not loaded yet
   if (!timerStatus) {
     return (
-      <div className='flex items-center gap-2 p-2 bg-gray-50 rounded-lg'>
-        <div className='text-sm text-gray-500'>Loading timer...</div>
+      <div className='flex items-center justify-center p-4 bg-gray-50 rounded-lg'>
+        <LoadingLogo size='sm' text='Loading timer...' />
       </div>
     );
   }

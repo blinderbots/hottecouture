@@ -5,17 +5,20 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { TimerButton } from '@/components/timer/timer-button';
+import { LoadingLogo } from '@/components/ui/loading-logo';
 
 interface OrderDetailModalProps {
   order: any;
   isOpen: boolean;
   onClose: () => void;
+  onOrderUpdate?: (orderId: string, newStatus: string) => void;
 }
 
 export function OrderDetailModal({
   order,
   isOpen,
   onClose,
+  onOrderUpdate,
 }: OrderDetailModalProps) {
   const [detailedOrder, setDetailedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -28,6 +31,11 @@ export function OrderDetailModal({
       const response = await fetch(`/api/order/${order.id}/details`);
       if (response.ok) {
         const result = await response.json();
+        console.log('🔍 OrderDetailModal: Received order data:', {
+          id: result.order?.id,
+          status: result.order?.status,
+          order_number: result.order?.order_number,
+        });
         setDetailedOrder(result.order);
       }
     } catch (error) {
@@ -42,6 +50,13 @@ export function OrderDetailModal({
       fetchOrderDetails();
     }
   }, [isOpen, order?.id, fetchOrderDetails]);
+
+  // Refresh order details when the order status changes
+  useEffect(() => {
+    if (isOpen && order?.id && order?.status) {
+      fetchOrderDetails();
+    }
+  }, [isOpen, order?.id, order?.status, fetchOrderDetails]);
 
   if (!isOpen) return null;
 
@@ -99,11 +114,8 @@ export function OrderDetailModal({
           </div>
 
           {loading && (
-            <div className='flex items-center justify-center py-8'>
-              <div className='text-center'>
-                <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4'></div>
-                <p className='text-gray-600'>Loading order details...</p>
-              </div>
+            <div className='flex items-center justify-center py-12'>
+              <LoadingLogo size='lg' text='Loading order details...' />
             </div>
           )}
 

@@ -23,7 +23,7 @@ export async function GET(
       simpleError,
     });
 
-    // Get order with basic information
+    // Get order with basic information - use the same query as the orders API
     const { data: order, error: orderError } = await supabase
       .from('order')
       .select(
@@ -73,6 +73,7 @@ export async function GET(
 
     console.log('✅ Order Details API: Found order', {
       order_number: (order as any).order_number,
+      status: (order as any).status,
       client_name: (order as any).client?.first_name,
     });
 

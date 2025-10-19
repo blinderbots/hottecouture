@@ -187,224 +187,262 @@ export function PricingStep({
   }, []); // Empty dependency array means this runs once on mount
 
   return (
-    <div className='space-y-6'>
-      {/* Due Date */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Due Date</CardTitle>
-          <CardDescription>
-            When should this order be completed? (Default: 10 working days from
-            today)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <input
-            type='date'
-            value={data.due_date || ''}
-            onChange={e => handleInputChange('due_date', e.target.value)}
-            min={getMinDate()}
-            className='w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent'
-          />
-        </CardContent>
-      </Card>
+    <div className='h-full flex flex-col overflow-hidden min-h-0'>
+      {/* iOS-style Header with Navigation */}
+      <div className='flex items-center justify-between px-1 py-3 border-b border-gray-200 bg-white flex-shrink-0'>
+        <Button
+          variant='ghost'
+          onClick={onPrev}
+          className='flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200'
+        >
+          <svg
+            className='w-4 h-4'
+            fill='none'
+            stroke='currentColor'
+            viewBox='0 0 24 24'
+          >
+            <path
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth={2}
+              d='M15 19l-7-7 7-7'
+            />
+          </svg>
+          <span className='font-medium'>Previous</span>
+        </Button>
 
-      {/* Rush Order */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Express Service</CardTitle>
-          <CardDescription>
-            Express services are completed faster but include additional fees
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className='space-y-4'>
-            <div className='space-y-4'>
-              <div className='flex items-center space-x-4'>
-                <input
-                  type='checkbox'
-                  id='rush'
-                  checked={data.rush}
-                  onChange={e => handleInputChange('rush', e.target.checked)}
-                  className='w-6 h-6 text-primary border-gray-300 rounded focus:ring-primary'
-                />
-                <label htmlFor='rush' className='text-lg font-medium'>
-                  This is an express service
-                </label>
-              </div>
+        <div className='flex-1 text-center'>
+          <h2 className='text-lg font-semibold text-gray-900'>
+            Pricing & Due Date
+          </h2>
+          <p className='text-sm text-gray-500'>Final pricing and due date</p>
+        </div>
 
-              {data.rush && (
-                <div className='ml-10 space-y-3'>
-                  <div>
-                    <label className='text-sm font-medium text-gray-700 mb-2 block'>
-                      Express Service Type
+        <Button
+          onClick={onNext}
+          disabled={isSubmitting}
+          className='bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+        >
+          {isSubmitting ? 'Processing...' : 'Submit Order 🚀'}
+        </Button>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className='flex-1 overflow-y-auto min-h-0'>
+        <div className='p-4 space-y-4'>
+          {/* Due Date */}
+          <Card>
+            <CardHeader className='pb-3'>
+              <CardTitle className='text-lg'>Due Date</CardTitle>
+              <CardDescription className='text-sm'>
+                When should this order be completed? (Default: 10 working days
+                from today)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='pt-0'>
+              <input
+                type='date'
+                value={data.due_date || ''}
+                onChange={e => handleInputChange('due_date', e.target.value)}
+                min={getMinDate()}
+                className='w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-h-[40px] touch-manipulation'
+              />
+            </CardContent>
+          </Card>
+
+          {/* Rush Order */}
+          <Card>
+            <CardHeader className='pb-3'>
+              <CardTitle className='text-lg'>Express Service</CardTitle>
+              <CardDescription className='text-sm'>
+                Express services are completed faster but include additional
+                fees
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='pt-0'>
+              <div className='space-y-3'>
+                <div className='space-y-3'>
+                  <div className='flex items-center space-x-3'>
+                    <input
+                      type='checkbox'
+                      id='rush'
+                      checked={data.rush}
+                      onChange={e =>
+                        handleInputChange('rush', e.target.checked)
+                      }
+                      className='w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary touch-manipulation'
+                    />
+                    <label htmlFor='rush' className='text-sm font-medium'>
+                      This is an express service
                     </label>
-                    <div className='space-y-2'>
-                      <label className='flex items-center space-x-3 cursor-pointer'>
-                        <input
-                          type='radio'
-                          name='rush_fee_type'
-                          value='small'
-                          checked={
-                            data.rush_fee_type === 'small' ||
-                            data.rush_fee_type === undefined
-                          }
-                          onChange={e =>
-                            handleInputChange('rush_fee_type', e.target.value)
-                          }
-                          className='w-4 h-4 text-primary border-gray-300 focus:ring-primary'
-                        />
-                        <span className='text-sm'>
-                          Express Service - $30.00 (1-2 days faster)
-                        </span>
-                      </label>
-                      <label className='flex items-center space-x-3 cursor-pointer'>
-                        <input
-                          type='radio'
-                          name='rush_fee_type'
-                          value='large'
-                          checked={data.rush_fee_type === 'large'}
-                          onChange={e =>
-                            handleInputChange('rush_fee_type', e.target.value)
-                          }
-                          className='w-4 h-4 text-primary border-gray-300 focus:ring-primary'
-                        />
-                        <span className='text-sm'>
-                          Express Service for Suits & Evening Dresses - $60.00
-                          (3+ days faster)
-                        </span>
-                      </label>
+                  </div>
+
+                  {data.rush && (
+                    <div className='ml-8 space-y-2'>
+                      <div>
+                        <label className='text-xs font-medium text-gray-700 mb-2 block'>
+                          Express Service Type
+                        </label>
+                        <div className='space-y-2'>
+                          <label className='flex items-center space-x-2 cursor-pointer'>
+                            <input
+                              type='radio'
+                              name='rush_fee_type'
+                              value='small'
+                              checked={
+                                data.rush_fee_type === 'small' ||
+                                data.rush_fee_type === undefined
+                              }
+                              onChange={e =>
+                                handleInputChange(
+                                  'rush_fee_type',
+                                  e.target.value
+                                )
+                              }
+                              className='w-4 h-4 text-primary border-gray-300 focus:ring-primary touch-manipulation'
+                            />
+                            <span className='text-xs'>
+                              Express Service - $30.00 (1-2 days faster)
+                            </span>
+                          </label>
+                          <label className='flex items-center space-x-2 cursor-pointer'>
+                            <input
+                              type='radio'
+                              name='rush_fee_type'
+                              value='large'
+                              checked={data.rush_fee_type === 'large'}
+                              onChange={e =>
+                                handleInputChange(
+                                  'rush_fee_type',
+                                  e.target.value
+                                )
+                              }
+                              className='w-4 h-4 text-primary border-gray-300 focus:ring-primary touch-manipulation'
+                            />
+                            <span className='text-xs'>
+                              Express Service for Suits & Evening Dresses -
+                              $60.00 (3+ days faster)
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {data.rush && calculation && (
+                  <div className='space-y-4'>
+                    <RushOrderTimeline
+                      isRush={data.rush}
+                      orderType={data.type}
+                      estimatedDays={data.type === 'alteration' ? 3 : 14}
+                    />
+
+                    <div className='p-4 bg-red-50 border border-red-200 rounded-lg'>
+                      <p className='text-red-800 font-medium text-sm'>
+                        ⚡ Express services are prioritized and completed faster
+                        than regular orders.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Garments & Services Summary */}
+          {garments && garments.length > 0 && (
+            <Card className='bg-gray-50 border-gray-200'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='text-gray-900 text-lg'>
+                  Order Items
+                </CardTitle>
+                <CardDescription className='text-sm'>
+                  Review the garments and services for this order
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='pt-0'>
+                {garments.map((garment, index) => (
+                  <div
+                    key={index}
+                    className='mb-3 p-3 bg-white rounded-lg border'
+                  >
+                    <div className='font-semibold text-gray-900 text-sm mb-2'>
+                      {garment.type}
+                    </div>
+                    {garment.services.map((service, sIndex) => {
+                      // Use the same logic as the calculation
+                      const baseService = services.find(
+                        s => s.id === service.serviceId
+                      );
+                      const basePrice = baseService?.base_price_cents || 5000;
+                      const servicePrice =
+                        service.customPriceCents || basePrice;
+
+                      return (
+                        <div
+                          key={sIndex}
+                          className='ml-3 text-xs text-gray-700 mb-1'
+                        >
+                          • {getServiceName(service.serviceId)}: Qty{' '}
+                          {service.qty} × ${(servicePrice / 100).toFixed(2)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Pricing Summary */}
+          {calculation && (
+            <Card className='bg-primary/5 border-primary/20'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='text-primary text-lg'>
+                  Order Summary
+                </CardTitle>
+                <CardDescription className='text-sm'>
+                  Review the pricing breakdown for this order
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='pt-0'>
+                <div className='space-y-2'>
+                  <div className='flex justify-between'>
+                    <span className='text-sm'>Subtotal:</span>
+                    <span className='text-sm font-medium'>
+                      {formatCurrency(calculation.subtotal_cents)}
+                    </span>
+                  </div>
+
+                  {data.rush && (
+                    <div className='flex justify-between'>
+                      <span className='text-sm'>Express Service Fee:</span>
+                      <span className='text-sm font-medium'>
+                        {formatCurrency(calculation.rush_fee_cents)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className='flex justify-between'>
+                    <span className='text-sm'>Tax:</span>
+                    <span className='text-sm font-medium'>
+                      {formatCurrency(calculation.tax_cents)}
+                    </span>
+                  </div>
+
+                  <div className='border-t border-primary/20 pt-2'>
+                    <div className='flex justify-between'>
+                      <span className='text-lg font-bold'>Total:</span>
+                      <span className='text-xl font-bold text-primary'>
+                        {formatCurrency(calculation.total_cents)}
+                      </span>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {data.rush && calculation && (
-              <div className='space-y-4'>
-                <RushOrderTimeline
-                  isRush={data.rush}
-                  orderType={data.type}
-                  estimatedDays={data.type === 'alteration' ? 3 : 14}
-                />
-
-                <div className='p-4 bg-red-50 border border-red-200 rounded-lg'>
-                  <p className='text-red-800 font-medium text-sm'>
-                    ⚡ Express services are prioritized and completed faster
-                    than regular orders.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Garments & Services Summary */}
-      {garments && garments.length > 0 && (
-        <Card className='bg-gray-50 border-gray-200'>
-          <CardHeader>
-            <CardTitle className='text-gray-900'>Order Items</CardTitle>
-            <CardDescription>
-              Review the garments and services for this order
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {garments.map((garment, index) => (
-              <div key={index} className='mb-4 p-4 bg-white rounded-lg border'>
-                <div className='font-semibold text-gray-900 text-lg mb-2'>
-                  {garment.type}
-                </div>
-                {garment.services.map((service, sIndex) => {
-                  // Use the same logic as the calculation
-                  const baseService = services.find(
-                    s => s.id === service.serviceId
-                  );
-                  const basePrice = baseService?.base_price_cents || 5000;
-                  const servicePrice = service.customPriceCents || basePrice;
-
-                  return (
-                    <div
-                      key={sIndex}
-                      className='ml-4 text-sm text-gray-700 mb-1'
-                    >
-                      • {getServiceName(service.serviceId)}: Qty {service.qty} ×
-                      ${(servicePrice / 100).toFixed(2)}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Pricing Summary */}
-      {calculation && (
-        <Card className='bg-primary/5 border-primary/20'>
-          <CardHeader>
-            <CardTitle className='text-primary'>Order Summary</CardTitle>
-            <CardDescription>
-              Review the pricing breakdown for this order
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className='space-y-3'>
-              <div className='flex justify-between'>
-                <span className='text-lg'>Subtotal:</span>
-                <span className='text-lg font-medium'>
-                  {formatCurrency(calculation.subtotal_cents)}
-                </span>
-              </div>
-
-              {data.rush && (
-                <div className='flex justify-between'>
-                  <span className='text-lg'>Express Service Fee:</span>
-                  <span className='text-lg font-medium'>
-                    {formatCurrency(calculation.rush_fee_cents)}
-                  </span>
-                </div>
-              )}
-
-              <div className='flex justify-between'>
-                <span className='text-lg'>Tax:</span>
-                <span className='text-lg font-medium'>
-                  {formatCurrency(calculation.tax_cents)}
-                </span>
-              </div>
-
-              <div className='border-t border-primary/20 pt-3'>
-                <div className='flex justify-between'>
-                  <span className='text-xl font-bold'>Total:</span>
-                  <span className='text-2xl font-bold text-primary'>
-                    {formatCurrency(calculation.total_cents)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Sticky Navigation - iPad 8 Optimized */}
-      <div className='sticky bottom-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-gray-200'>
-        <div className='flex space-x-4'>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={onPrev}
-            disabled={isSubmitting}
-            className='flex-1 py-3 text-lg btn-press'
-          >
-            Previous
-          </Button>
-          <Button
-            type='button'
-            onClick={onNext}
-            disabled={isSubmitting}
-            className='flex-1 py-3 text-lg btn-press bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed'
-          >
-            {isSubmitting ? 'Processing...' : 'Submit Order 🚀'}
-          </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

@@ -20,9 +20,15 @@ interface ClientStepProps {
   data: ClientCreate | null;
   onUpdate: (client: ClientCreate) => void;
   onNext: () => void;
+  onPrev?: () => void;
 }
 
-export function ClientStep({ data, onUpdate, onNext }: ClientStepProps) {
+export function ClientStep({
+  data,
+  onUpdate,
+  onNext,
+  onPrev,
+}: ClientStepProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ClientCreate[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -253,314 +259,353 @@ export function ClientStep({ data, onUpdate, onNext }: ClientStepProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Client Information</CardTitle>
-        <CardDescription>
-          Search for an existing client or create a new one
-        </CardDescription>
-      </CardHeader>
-      <CardContent className='space-y-6'>
-        {!data ? (
-          <>
-            <div>
-              <label
-                htmlFor='search'
-                className='block text-sm font-medium mb-2'
-              >
-                Search Client
-              </label>
-              <input
-                id='search'
-                type='text'
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder='Enter phone number or email'
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-              />
-            </div>
+    <div className='h-full flex flex-col overflow-hidden min-h-0'>
+      {/* iOS-style Header with Navigation */}
+      <div className='flex items-center justify-between px-1 py-3 border-b border-gray-200 bg-white flex-shrink-0'>
+        <Button
+          variant='ghost'
+          onClick={onPrev}
+          className='flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200'
+        >
+          <svg
+            className='w-4 h-4'
+            fill='none'
+            stroke='currentColor'
+            viewBox='0 0 24 24'
+          >
+            <path
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth={2}
+              d='M15 19l-7-7 7-7'
+            />
+          </svg>
+          <span className='font-medium'>Previous</span>
+        </Button>
 
-            {isSearching && (
-              <div className='text-center py-4'>
-                <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto'></div>
-                <p className='mt-2 text-sm text-gray-600'>Searching...</p>
-              </div>
-            )}
+        <div className='flex-1 text-center'>
+          <h2 className='text-lg font-semibold text-gray-900'>
+            Client Information
+          </h2>
+          <p className='text-sm text-gray-500'>
+            Search for an existing client or create a new one
+          </p>
+        </div>
 
-            {searchResults.length > 0 && (
-              <div className='space-y-2'>
-                <h3 className='font-medium'>Search Results</h3>
-                {searchResults.map((client, index) => (
-                  <div
-                    key={client.first_name + client.last_name + index}
-                    className='p-3 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer'
-                    onClick={() => handleSelectClient(client)}
-                  >
-                    <div className='font-medium'>
-                      {client.first_name} {client.last_name}
-                    </div>
-                    <div className='text-sm text-gray-600'>
-                      {client.phone} • {client.email}
-                    </div>
-                    <div className='text-xs text-gray-500 mt-1'>
-                      Preferred:{' '}
-                      {client.preferred_contact === 'email'
-                        ? '📧 Email'
-                        : '💬 SMS'}{' '}
-                      • Newsletter: {client.newsletter_consent ? '✅' : '❌'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!showCreateForm ? (
-              <Button
-                variant='outline'
-                onClick={() => setShowCreateForm(true)}
-                className='w-full btn-press bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-gray-300'
-              >
-                Create New Client
-              </Button>
-            ) : (
-              <form onSubmit={handleCreateClient} className='space-y-4'>
-                <div className='grid grid-cols-2 gap-4'>
-                  <div>
-                    <label
-                      htmlFor='firstName'
-                      className='block text-sm font-medium mb-1'
-                    >
-                      First Name *
-                    </label>
-                    <input
-                      id='firstName'
-                      type='text'
-                      value={formData.first_name}
-                      onChange={e =>
-                        setFormData(prev => ({
-                          ...prev,
-                          first_name: e.target.value,
-                        }))
-                      }
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.first_name ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    />
-                    {errors.first_name && (
-                      <p className='text-red-500 text-sm mt-1'>
-                        {errors.first_name}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor='lastName'
-                      className='block text-sm font-medium mb-1'
-                    >
-                      Last Name *
-                    </label>
-                    <input
-                      id='lastName'
-                      type='text'
-                      value={formData.last_name}
-                      onChange={e =>
-                        setFormData(prev => ({
-                          ...prev,
-                          last_name: e.target.value,
-                        }))
-                      }
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.last_name ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    />
-                    {errors.last_name && (
-                      <p className='text-red-500 text-sm mt-1'>
-                        {errors.last_name}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className='grid grid-cols-2 gap-4'>
-                  <div>
-                    <label
-                      htmlFor='phone'
-                      className='block text-sm font-medium mb-1'
-                    >
-                      Phone *
-                    </label>
-                    <input
-                      id='phone'
-                      type='tel'
-                      value={formData.phone}
-                      onChange={e => handlePhoneChange(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.phone ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder='+1 (555) 123-4567'
-                    />
-                    {errors.phone && (
-                      <p className='text-red-500 text-sm mt-1'>
-                        {errors.phone}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor='email'
-                      className='block text-sm font-medium mb-1'
-                    >
-                      Email
-                    </label>
-                    <input
-                      id='email'
-                      type='email'
-                      value={formData.email}
-                      onChange={e => handleEmailChange(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.email ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder='client@example.com'
-                    />
-                    {errors.email && (
-                      <p className='text-red-500 text-sm mt-1'>
-                        {errors.email}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor='language'
-                    className='block text-sm font-medium mb-1'
-                  >
-                    Language
-                  </label>
-                  <select
-                    id='language'
-                    value={formData.language}
-                    onChange={e =>
-                      setFormData(prev => ({
-                        ...prev,
-                        language: e.target.value as 'fr' | 'en',
-                      }))
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  >
-                    <option value='fr'>Français</option>
-                    <option value='en'>English</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor='preferredContact'
-                    className='block text-sm font-medium mb-1'
-                  >
-                    Preferred Communication Method
-                  </label>
-                  <select
-                    id='preferredContact'
-                    value={formData.preferred_contact}
-                    onChange={e =>
-                      setFormData(prev => ({
-                        ...prev,
-                        preferred_contact: e.target.value as 'email' | 'sms',
-                      }))
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  >
-                    <option value='email'>📧 Email</option>
-                    <option value='sms'>💬 Text Message (SMS)</option>
-                  </select>
-                </div>
-
-                <div className='flex items-center space-x-3'>
-                  <input
-                    id='newsletterConsent'
-                    type='checkbox'
-                    checked={formData.newsletter_consent}
-                    onChange={e =>
-                      setFormData(prev => ({
-                        ...prev,
-                        newsletter_consent: e.target.checked,
-                      }))
-                    }
-                    className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
-                  />
-                  <label
-                    htmlFor='newsletterConsent'
-                    className='text-sm font-medium text-gray-700'
-                  >
-                    Subscribe to newsletter for updates and promotions
-                  </label>
-                </div>
-
-                <div className='flex gap-3'>
-                  <Button
-                    type='submit'
-                    className='flex-1 btn-press bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed'
-                    disabled={isCreating}
-                  >
-                    {isCreating ? 'Creating...' : 'Create Client'}
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    onClick={() => setShowCreateForm(false)}
-                    className='flex-1 btn-press bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-gray-300'
-                    disabled={isCreating}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            )}
-          </>
-        ) : (
-          <div className='p-4 bg-green-50 border border-green-200 rounded-md'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <h3 className='font-medium text-green-800'>
-                  {data.first_name} {data.last_name}
-                </h3>
-                <p className='text-sm text-green-600'>
-                  {data.phone} • {data.email}
-                </p>
-                <div className='text-xs text-green-600 mt-1'>
-                  Preferred:{' '}
-                  {data.preferred_contact === 'email' ? '📧 Email' : '💬 SMS'} •
-                  Newsletter:{' '}
-                  {data.newsletter_consent
-                    ? '✅ Subscribed'
-                    : '❌ Not subscribed'}
-                </div>
-              </div>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => setShowCreateForm(true)}
-                className='btn-press bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-gray-300'
-              >
-                Change
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Sticky Next Button - iPad 8 Optimized */}
         {data && (
-          <div className='sticky top-4 z-10 mb-6'>
-            <Button
-              onClick={onNext}
-              className='w-full ipad:w-auto btn-press bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 py-3 px-8 text-lg'
-            >
-              Continue to Garments →
-            </Button>
-          </div>
+          <Button
+            onClick={onNext}
+            className='bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200'
+          >
+            Next
+          </Button>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className='flex-1 overflow-y-auto min-h-0'>
+        <div className='p-4 space-y-4'>
+          {!data ? (
+            <>
+              <div>
+                <label
+                  htmlFor='search'
+                  className='block text-sm font-medium mb-1'
+                >
+                  Search Client
+                </label>
+                <input
+                  id='search'
+                  type='text'
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder='Enter phone number or email'
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[40px] text-sm touch-manipulation'
+                />
+              </div>
+
+              {isSearching && (
+                <div className='text-center py-2'>
+                  <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto'></div>
+                  <p className='mt-1 text-xs text-gray-600'>Searching...</p>
+                </div>
+              )}
+
+              {searchResults.length > 0 && (
+                <div className='space-y-1'>
+                  <h3 className='font-medium text-sm'>Search Results</h3>
+                  {searchResults.map((client, index) => (
+                    <div
+                      key={client.first_name + client.last_name + index}
+                      className='p-2 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer'
+                      onClick={() => handleSelectClient(client)}
+                    >
+                      <div className='font-medium text-sm'>
+                        {client.first_name} {client.last_name}
+                      </div>
+                      <div className='text-xs text-gray-600'>
+                        {client.phone} • {client.email}
+                      </div>
+                      <div className='text-xs text-gray-500 mt-1'>
+                        Preferred:{' '}
+                        {client.preferred_contact === 'email'
+                          ? '📧 Email'
+                          : '💬 SMS'}{' '}
+                        • Newsletter: {client.newsletter_consent ? '✅' : '❌'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!showCreateForm ? (
+                <Button
+                  variant='outline'
+                  onClick={() => setShowCreateForm(true)}
+                  className='w-full btn-press bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-gray-300 text-sm py-2'
+                >
+                  Create New Client
+                </Button>
+              ) : (
+                <form onSubmit={handleCreateClient} className='space-y-3'>
+                  <div className='grid grid-cols-2 gap-3'>
+                    <div>
+                      <label
+                        htmlFor='firstName'
+                        className='block text-xs font-medium mb-1'
+                      >
+                        First Name *
+                      </label>
+                      <input
+                        id='firstName'
+                        type='text'
+                        value={formData.first_name}
+                        onChange={e =>
+                          setFormData(prev => ({
+                            ...prev,
+                            first_name: e.target.value,
+                          }))
+                        }
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[36px] text-sm touch-manipulation ${
+                          errors.first_name
+                            ? 'border-red-500'
+                            : 'border-gray-300'
+                        }`}
+                      />
+                      {errors.first_name && (
+                        <p className='text-red-500 text-xs mt-1'>
+                          {errors.first_name}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label
+                        htmlFor='lastName'
+                        className='block text-xs font-medium mb-1'
+                      >
+                        Last Name *
+                      </label>
+                      <input
+                        id='lastName'
+                        type='text'
+                        value={formData.last_name}
+                        onChange={e =>
+                          setFormData(prev => ({
+                            ...prev,
+                            last_name: e.target.value,
+                          }))
+                        }
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[36px] text-sm touch-manipulation ${
+                          errors.last_name
+                            ? 'border-red-500'
+                            : 'border-gray-300'
+                        }`}
+                      />
+                      {errors.last_name && (
+                        <p className='text-red-500 text-xs mt-1'>
+                          {errors.last_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-3'>
+                    <div>
+                      <label
+                        htmlFor='phone'
+                        className='block text-xs font-medium mb-1'
+                      >
+                        Phone *
+                      </label>
+                      <input
+                        id='phone'
+                        type='tel'
+                        value={formData.phone}
+                        onChange={e => handlePhoneChange(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[36px] text-sm touch-manipulation ${
+                          errors.phone ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder='+1 (555) 123-4567'
+                      />
+                      {errors.phone && (
+                        <p className='text-red-500 text-xs mt-1'>
+                          {errors.phone}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label
+                        htmlFor='email'
+                        className='block text-xs font-medium mb-1'
+                      >
+                        Email
+                      </label>
+                      <input
+                        id='email'
+                        type='email'
+                        value={formData.email}
+                        onChange={e => handleEmailChange(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[36px] text-sm touch-manipulation ${
+                          errors.email ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder='client@example.com'
+                      />
+                      {errors.email && (
+                        <p className='text-red-500 text-xs mt-1'>
+                          {errors.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-3'>
+                    <div>
+                      <label
+                        htmlFor='language'
+                        className='block text-xs font-medium mb-1'
+                      >
+                        Language
+                      </label>
+                      <select
+                        id='language'
+                        value={formData.language}
+                        onChange={e =>
+                          setFormData(prev => ({
+                            ...prev,
+                            language: e.target.value as 'fr' | 'en',
+                          }))
+                        }
+                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[36px] text-sm touch-manipulation'
+                      >
+                        <option value='fr'>Français</option>
+                        <option value='en'>English</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor='preferredContact'
+                        className='block text-xs font-medium mb-1'
+                      >
+                        Preferred Contact
+                      </label>
+                      <select
+                        id='preferredContact'
+                        value={formData.preferred_contact}
+                        onChange={e =>
+                          setFormData(prev => ({
+                            ...prev,
+                            preferred_contact: e.target.value as
+                              | 'email'
+                              | 'sms',
+                          }))
+                        }
+                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[36px] text-sm touch-manipulation'
+                      >
+                        <option value='email'>📧 Email</option>
+                        <option value='sms'>💬 SMS</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className='flex items-center space-x-2'>
+                    <input
+                      id='newsletterConsent'
+                      type='checkbox'
+                      checked={formData.newsletter_consent}
+                      onChange={e =>
+                        setFormData(prev => ({
+                          ...prev,
+                          newsletter_consent: e.target.checked,
+                        }))
+                      }
+                      className='h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                    />
+                    <label
+                      htmlFor='newsletterConsent'
+                      className='text-xs font-medium text-gray-700'
+                    >
+                      Subscribe to newsletter
+                    </label>
+                  </div>
+
+                  <div className='flex gap-2'>
+                    <Button
+                      type='submit'
+                      className='flex-1 btn-press bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm py-2'
+                      disabled={isCreating}
+                    >
+                      {isCreating ? 'Creating...' : 'Create Client'}
+                    </Button>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() => setShowCreateForm(false)}
+                      className='flex-1 btn-press bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-gray-300 text-sm py-2'
+                      disabled={isCreating}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </>
+          ) : (
+            <div className='p-3 bg-green-50 border border-green-200 rounded-md'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <h3 className='font-medium text-green-800 text-sm'>
+                    {data.first_name} {data.last_name}
+                  </h3>
+                  <p className='text-xs text-green-600'>
+                    {data.phone} • {data.email}
+                  </p>
+                  <div className='text-xs text-green-600 mt-1'>
+                    Preferred:{' '}
+                    {data.preferred_contact === 'email' ? '📧 Email' : '💬 SMS'}{' '}
+                    • Newsletter:{' '}
+                    {data.newsletter_consent
+                      ? '✅ Subscribed'
+                      : '❌ Not subscribed'}
+                  </div>
+                </div>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => {
+                    onUpdate(null);
+                    setShowCreateForm(false);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }}
+                  className='btn-press bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-300 border-gray-300 text-xs px-2 py-1'
+                >
+                  Change
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

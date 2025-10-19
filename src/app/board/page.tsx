@@ -8,6 +8,7 @@ import { ArchiveButton } from '@/components/board/archive-button';
 import { OrderType } from '@/lib/types/database';
 import { useRealtimeOrders } from '@/lib/hooks/useRealtimeOrders';
 import { AuthGuard } from '@/components/auth/auth-guard';
+import { LoadingLogo } from '@/components/ui/loading-logo';
 import Link from 'next/link';
 
 export default function BoardPage() {
@@ -226,10 +227,7 @@ export default function BoardPage() {
     return (
       <div className='p-8'>
         <div className='flex items-center justify-center min-h-[400px]'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4'></div>
-            <p className='text-lg text-gray-600'>Loading board...</p>
-          </div>
+          <LoadingLogo size='xl' text='Loading board...' />
         </div>
       </div>
     );

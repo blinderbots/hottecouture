@@ -252,6 +252,7 @@ export function InteractiveBoard({
         order={selectedOrder}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onOrderUpdate={onOrderUpdate}
       />
     </>
   );

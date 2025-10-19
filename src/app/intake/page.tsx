@@ -11,7 +11,7 @@ import {
 import { PipelineSelector } from '@/components/intake/pipeline-selector';
 import { ClientStep } from '@/components/intake/client-step';
 import { GarmentsStep } from '@/components/intake/garments-step';
-import { ServicesStepTablet } from '@/components/intake/services-step-tablet';
+import { ServicesStepNew } from '@/components/intake/services-step-new';
 import { NotesStep } from '@/components/intake/notes-step';
 import { PricingStep } from '@/components/intake/pricing-step';
 import { OrderSummary } from '@/components/intake/order-summary';
@@ -287,6 +287,7 @@ export default function IntakePage() {
             data={formData.client as any}
             onUpdate={client => updateFormData({ client: client as any })}
             onNext={nextStep}
+            onPrev={prevStep}
           />
         );
       case 'garments':
@@ -300,7 +301,7 @@ export default function IntakePage() {
         );
       case 'services':
         return (
-          <ServicesStepTablet
+          <ServicesStepNew
             data={formData.garments}
             onUpdate={garments => updateFormData({ garments })}
             onNext={nextStep}
@@ -354,49 +355,88 @@ export default function IntakePage() {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-pink-50 to-purple-50'>
-      <div className='container mx-auto px-4 py-8 max-w-4xl'>
-        <div className='mb-8'>
-          <h1 className='text-3xl font-bold text-center mb-2'>Order Intake</h1>
-          <p className='text-center text-gray-600'>
+      <div className='container mx-auto px-4 py-4 md:py-8 max-w-6xl'>
+        <div className='mb-6 md:mb-8 text-center'>
+          <div className='inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mb-4 shadow-lg'>
+            <svg
+              className='w-8 h-8 text-white'
+              fill='none'
+              stroke='currentColor'
+              viewBox='0 0 24 24'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+              />
+            </svg>
+          </div>
+          <h1 className='text-3xl md:text-4xl font-bold text-gray-900 mb-3'>
+            Order Intake
+          </h1>
+          <p className='text-lg text-gray-600 max-w-2xl mx-auto'>
             Complete order intake in {steps.length} simple steps
           </p>
         </div>
 
-        {/* Progress indicator */}
-        <div className='mb-8'>
-          <div className='flex items-center justify-between'>
-            {steps.map((step, index) => {
-              const isActive = step.key === currentStep;
-              const isCompleted =
-                steps.findIndex(s => s.key === currentStep) > index;
+        {/* Compact Progress Indicator */}
+        <div className='mb-4'>
+          <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-3'>
+            <div className='flex items-center justify-between'>
+              {steps.map((step, index) => {
+                const isActive = step.key === currentStep;
+                const isCompleted =
+                  steps.findIndex(s => s.key === currentStep) > index;
 
-              return (
-                <div key={step.key} className='flex items-center'>
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : isCompleted
-                          ? 'bg-green-500 text-white'
-                          : 'bg-gray-200 text-gray-600'
-                    }`}
-                  >
-                    {index + 1}
-                  </div>
-                  <div className='ml-3'>
-                    <p
-                      className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-gray-600'}`}
+                return (
+                  <div key={step.key} className='flex items-center group'>
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold touch-manipulation transition-all duration-300 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-110'
+                          : isCompleted
+                            ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                            : 'bg-gray-100 text-gray-500'
+                      }`}
                     >
-                      {step.title}
-                    </p>
-                    <p className='text-xs text-gray-500'>{step.description}</p>
+                      {isCompleted ? (
+                        <svg
+                          className='w-4 h-4'
+                          fill='currentColor'
+                          viewBox='0 0 20 20'
+                        >
+                          <path
+                            fillRule='evenodd'
+                            d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                            clipRule='evenodd'
+                          />
+                        </svg>
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    {index < steps.length - 1 && (
+                      <div className='flex items-center mx-2'>
+                        <div
+                          className={`w-8 h-0.5 ${
+                            isCompleted ? 'bg-green-400' : 'bg-gray-200'
+                          }`}
+                        />
+                      </div>
+                    )}
                   </div>
-                  {index < steps.length - 1 && (
-                    <div className='w-8 h-0.5 bg-gray-200 mx-4' />
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <div className='mt-2 text-center'>
+              <p className='text-sm font-medium text-gray-900'>
+                {steps.find(s => s.key === currentStep)?.title}
+              </p>
+              <p className='text-xs text-gray-500'>
+                {steps.find(s => s.key === currentStep)?.description}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -407,17 +447,11 @@ export default function IntakePage() {
           </div>
         )}
 
-        {/* Step content */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {steps.find(s => s.key === currentStep)?.title}
-            </CardTitle>
-            <CardDescription>
-              {steps.find(s => s.key === currentStep)?.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>{renderStep()}</CardContent>
+        {/* Step content - One Page App */}
+        <Card className='shadow-lg border-0 bg-white/95 backdrop-blur-sm'>
+          <CardContent className='p-4 md:p-6 h-[calc(100dvh-300px)] overflow-hidden min-h-0'>
+            {renderStep()}
+          </CardContent>
         </Card>
       </div>
     </div>
