@@ -26,7 +26,6 @@ export function PipelineSelector({
   selectedPipeline,
   onPipelineChange,
   onNext,
-  onPrev,
 }: PipelineSelectorProps) {
   const pipelines = [
     {
