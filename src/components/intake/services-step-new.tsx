@@ -162,14 +162,16 @@ export function ServicesStepNew({
       }
     } else {
       // Add new service
-      garment.services.push({
+      const serviceData: any = {
         serviceId,
         qty: 1,
-        customPriceCents:
-          service.pricing_model === 'hourly'
-            ? undefined
-            : service.base_price_cents,
-      });
+      };
+
+      if (service.pricing_model !== 'hourly') {
+        serviceData.customPriceCents = service.base_price_cents;
+      }
+
+      garment.services.push(serviceData);
     }
 
     onUpdate(updatedGarments);
