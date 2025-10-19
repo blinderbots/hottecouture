@@ -156,7 +156,10 @@ export function ServicesStepNew({
 
     if (existingServiceIndex >= 0) {
       // Update quantity
-      garment.services[existingServiceIndex].qty += 1;
+      const existingService = garment.services[existingServiceIndex];
+      if (existingService) {
+        existingService.qty += 1;
+      }
     } else {
       // Add new service
       garment.services.push({
