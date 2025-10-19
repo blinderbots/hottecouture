@@ -293,38 +293,72 @@ export async function POST(request: NextRequest) {
       // Create garment_services
       if (garment.services && garment.services.length > 0) {
         for (const service of garment.services) {
-          // First, ensure the service exists
-          const { data: existingService, error: serviceCheckError } =
-            await supabase
-              .from('service')
-              .select('id')
-              .eq('id', service.serviceId)
-              .single();
+          // Check if this is a custom service
+          const isCustomService = service.serviceId.startsWith('custom-');
 
-          const serviceId = service.serviceId;
-
-          if (serviceCheckError || !existingService) {
-            // Service doesn't exist - this should not happen if intake form is working correctly
-            console.error(
-              '❌ Intake API: Service not found in database:',
+          if (isCustomService) {
+            // For custom services, create a temporary service record first
+            console.log(
+              '🔧 Intake API: Creating custom service:',
               service.serviceId
             );
-            console.error(
-              '❌ Intake API: This indicates the intake form is not working correctly'
-            );
-            return NextResponse.json(
-              {
-                error: `Service not found: ${service.serviceId}. Please refresh the page and try again.`,
-              },
-              { status: 400 }
-            );
+
+            const { data: customService, error: customServiceError } =
+              await supabase
+                .from('service')
+                .insert({
+                  id: service.serviceId,
+                  name: service.customServiceName || 'Custom Service',
+                  base_price_cents: service.customPriceCents || 0,
+                  category: 'Custom',
+                  is_custom: true,
+                })
+                .select('id')
+                .single();
+
+            if (customServiceError) {
+              console.error(
+                '❌ Intake API: Failed to create custom service:',
+                customServiceError
+              );
+              return NextResponse.json(
+                {
+                  error: `Failed to create custom service: ${customServiceError.message}`,
+                },
+                { status: 500 }
+              );
+            }
+          } else {
+            // For regular services, ensure the service exists in the database
+            const { data: existingService, error: serviceCheckError } =
+              await supabase
+                .from('service')
+                .select('id')
+                .eq('id', service.serviceId)
+                .single();
+
+            if (serviceCheckError || !existingService) {
+              console.error(
+                '❌ Intake API: Service not found in database:',
+                service.serviceId
+              );
+              console.error(
+                '❌ Intake API: This indicates the intake form is not working correctly'
+              );
+              return NextResponse.json(
+                {
+                  error: `Service not found: ${service.serviceId}. Please refresh the page and try again.`,
+                },
+                { status: 400 }
+              );
+            }
           }
 
           const { error: garmentServiceError } = await supabase
             .from('garment_service')
             .insert({
               garment_id: (newGarment as any).id,
-              service_id: serviceId,
+              service_id: service.serviceId,
               quantity: service.qty || 1,
               custom_price_cents: service.customPriceCents || null,
               notes: service.notes || null,
