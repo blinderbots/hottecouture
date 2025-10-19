@@ -147,6 +147,7 @@ export function ServicesStepNew({
 
     const updatedGarments = [...data];
     const garment = updatedGarments[garmentIndex];
+    if (!garment) return;
 
     // Check if service already exists
     const existingServiceIndex = garment.services.findIndex(
