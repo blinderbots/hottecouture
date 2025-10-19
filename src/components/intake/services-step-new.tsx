@@ -184,6 +184,8 @@ export function ServicesStepNew({
 
     const updatedGarments = [...data];
     const garment = updatedGarments[garmentIndex];
+    if (!garment) return;
+
     const serviceIndex = garment.services.findIndex(
       s => s.serviceId === serviceId
     );
