@@ -307,19 +307,18 @@ export async function POST(request: NextRequest) {
             // Generate a proper UUID for the custom service
             const customServiceId = crypto.randomUUID();
 
-            const { data: customService, error: customServiceError } =
-              await supabase
-                .from('service')
-                .insert({
-                  id: customServiceId,
-                  code: `CUSTOM-${Date.now()}`, // Generate unique code
-                  name: service.customServiceName || 'Custom Service',
-                  base_price_cents: service.customPriceCents || 0,
-                  category: 'Custom',
-                  is_custom: true,
-                })
-                .select('id')
-                .single();
+            const { error: customServiceError } = await supabase
+              .from('service')
+              .insert({
+                id: customServiceId,
+                code: `CUSTOM-${Date.now()}`, // Generate unique code
+                name: service.customServiceName || 'Custom Service',
+                base_price_cents: service.customPriceCents || 0,
+                category: 'Custom',
+                is_custom: true,
+              })
+              .select('id')
+              .single();
 
             if (customServiceError) {
               console.error(
