@@ -295,6 +295,7 @@ export async function POST(request: NextRequest) {
         for (const service of garment.services) {
           // Check if this is a custom service
           const isCustomService = service.serviceId.startsWith('custom-');
+          let serviceId = service.serviceId;
 
           if (isCustomService) {
             // For custom services, create a temporary service record first
@@ -303,11 +304,15 @@ export async function POST(request: NextRequest) {
               service.serviceId
             );
 
+            // Generate a proper UUID for the custom service
+            const customServiceId = crypto.randomUUID();
+
             const { data: customService, error: customServiceError } =
               await supabase
                 .from('service')
                 .insert({
-                  id: service.serviceId,
+                  id: customServiceId,
+                  code: `CUSTOM-${Date.now()}`, // Generate unique code
                   name: service.customServiceName || 'Custom Service',
                   base_price_cents: service.customPriceCents || 0,
                   category: 'Custom',
@@ -328,6 +333,9 @@ export async function POST(request: NextRequest) {
                 { status: 500 }
               );
             }
+
+            // Use the created custom service ID
+            serviceId = customServiceId;
           } else {
             // For regular services, ensure the service exists in the database
             const { data: existingService, error: serviceCheckError } =
@@ -358,7 +366,7 @@ export async function POST(request: NextRequest) {
             .from('garment_service')
             .insert({
               garment_id: (newGarment as any).id,
-              service_id: service.serviceId,
+              service_id: serviceId,
               quantity: service.qty || 1,
               custom_price_cents: service.customPriceCents || null,
               notes: service.notes || null,
