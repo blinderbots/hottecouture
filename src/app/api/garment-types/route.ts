@@ -20,7 +20,7 @@ export async function GET() {
 
     // Sort garment types manually
     const sortedGarmentTypes =
-      garmentTypes?.sort((a, b) => {
+      garmentTypes?.sort((a: any, b: any) => {
         // First by category
         if (a.category !== b.category) {
           return a.category.localeCompare(b.category);
