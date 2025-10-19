@@ -64,9 +64,13 @@ export function GarmentsStep({
   useEffect(() => {
     const loadGarmentTypes = async () => {
       try {
-        const response = await fetch('/api/garment-types');
+        console.log('Loading garment types...');
+        const response = await fetch('/api/garment-types?' + Date.now());
         if (response.ok) {
           const data = await response.json();
+          console.log('Garment types data:', data);
+          console.log('Garment types count:', data.garmentTypes?.length);
+          console.log('Grouped types:', data.groupedTypes);
           setGarmentTypes(data.garmentTypes || []);
           setGroupedTypes(data.groupedTypes || {});
         } else {
@@ -159,11 +163,49 @@ export function GarmentsStep({
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className='p-6'>
-          <div className='text-center'>Loading garment types...</div>
-        </CardContent>
-      </Card>
+      <div className='h-full flex flex-col overflow-hidden min-h-0'>
+        <div className='flex items-center justify-between px-1 py-3 border-b border-gray-200 bg-white flex-shrink-0'>
+          <Button
+            variant='ghost'
+            onClick={onPrev}
+            className='flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200'
+          >
+            <svg
+              className='w-4 h-4'
+              fill='none'
+              stroke='currentColor'
+              viewBox='0 0 24 24'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M15 19l-7-7 7-7'
+              />
+            </svg>
+            <span className='font-medium'>Previous</span>
+          </Button>
+          <div className='flex-1 text-center'>
+            <h2 className='text-lg font-semibold text-gray-900'>
+              Add Garments
+            </h2>
+            <p className='text-sm text-gray-500'>Loading garment types...</p>
+          </div>
+          <Button
+            onClick={onNext}
+            disabled={true}
+            className='bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+          >
+            Next
+          </Button>
+        </div>
+        <div className='flex-1 overflow-y-auto min-h-0 flex items-center justify-center'>
+          <div className='text-center'>
+            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
+            <p className='text-gray-600'>Loading garment types...</p>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -236,6 +278,10 @@ export function GarmentsStep({
                     required
                   >
                     <option value=''>Choose a garment type...</option>
+                    {console.log(
+                      'Rendering dropdown with groupedTypes:',
+                      groupedTypes
+                    )}
                     {Object.entries(groupedTypes).map(([category, types]) => (
                       <optgroup
                         key={category}
