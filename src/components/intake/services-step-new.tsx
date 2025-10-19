@@ -224,6 +224,7 @@ export function ServicesStepNew({
     const customServiceId = `custom-${Date.now()}`;
     const updatedGarments = [...data];
     const garment = updatedGarments[garmentIndex];
+    if (!garment) return;
 
     // Check if this custom service already exists
     const existingService = garment.services.find(
