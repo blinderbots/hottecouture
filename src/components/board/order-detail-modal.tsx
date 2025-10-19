@@ -18,7 +18,6 @@ export function OrderDetailModal({
   order,
   isOpen,
   onClose,
-  onOrderUpdate,
 }: OrderDetailModalProps) {
   const [detailedOrder, setDetailedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
