@@ -191,8 +191,11 @@ export function ServicesStepNew({
     );
 
     if (serviceIndex >= 0) {
-      garment.services[serviceIndex].qty = qty;
-      onUpdate(updatedGarments);
+      const service = garment.services[serviceIndex];
+      if (service) {
+        service.qty = qty;
+        onUpdate(updatedGarments);
+      }
     }
   };
 
