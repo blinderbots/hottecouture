@@ -64,13 +64,9 @@ export function GarmentsStep({
   useEffect(() => {
     const loadGarmentTypes = async () => {
       try {
-        console.log('Loading garment types...');
-        const response = await fetch('/api/garment-types?' + Date.now());
+        const response = await fetch('/api/garment-types');
         if (response.ok) {
           const data = await response.json();
-          console.log('Garment types data:', data);
-          console.log('Garment types count:', data.garmentTypes?.length);
-          console.log('Grouped types:', data.groupedTypes);
           setGarmentTypes(data.garmentTypes || []);
           setGroupedTypes(data.groupedTypes || {});
         } else {
@@ -278,10 +274,6 @@ export function GarmentsStep({
                     required
                   >
                     <option value=''>Choose a garment type...</option>
-                    {console.log(
-                      'Rendering dropdown with groupedTypes:',
-                      groupedTypes
-                    )}
                     {Object.entries(groupedTypes).map(([category, types]) => (
                       <optgroup
                         key={category}
