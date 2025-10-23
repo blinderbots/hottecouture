@@ -65,14 +65,14 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Worklist Export Debug:', {
       category,
       totalOrdersFound: orders?.length || 0,
-      orderNumbers: orders?.map(o => o.order_number) || [],
+      orderNumbers: (orders as any[])?.map(o => o.order_number) || [],
     });
 
     // Filter by category if specified
     let filteredOrders = orders || [];
     if (category && category !== 'all') {
       filteredOrders = filteredOrders.filter(order =>
-        order.garments?.some((garment: any) =>
+        (order as any).garments?.some((garment: any) =>
           garment.services?.some(
             (service: any) => service.service?.category === category
           )
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       category: category || 'all',
       generatedAt: new Date().toISOString(),
       totalOrders: filteredOrders.length,
-      orders: filteredOrders.map(order => ({
+      orders: filteredOrders.map((order: any) => ({
         orderNumber: order.order_number,
         status: order.status,
         dueDate: order.due_date,

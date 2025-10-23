@@ -114,5 +114,5 @@ export function getDefaultDueDate(): Date {
  * @returns Date string in YYYY-MM-DD format
  */
 export function formatDateForInput(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split('T')[0] || '';
 }

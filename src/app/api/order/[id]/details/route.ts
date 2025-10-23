@@ -106,7 +106,7 @@ export async function GET(
     }
 
     // Get garment services for all garments
-    const garmentIds = garments?.map(g => g.id) || [];
+    const garmentIds = (garments as any[])?.map(g => g.id) || [];
     const { data: garmentServices, error: serviceError } = await supabase
       .from('garment_service')
       .select(
@@ -130,9 +130,11 @@ export async function GET(
 
     // Process garments with their services
     const processedGarments =
-      garments?.map((garment: any) => {
+      (garments as any[])?.map((garment: any) => {
         const garmentServicesForThisGarment =
-          garmentServices?.filter(gs => gs.garment_id === garment.id) || [];
+          (garmentServices as any[])?.filter(
+            gs => gs.garment_id === garment.id
+          ) || [];
 
         return {
           id: garment.id,
@@ -144,7 +146,7 @@ export async function GET(
           photo_path: garment.photo_path,
           measurements: garment.measurements,
           garment_type: garment.garment_type,
-          services: garmentServicesForThisGarment.map(
+          services: (garmentServicesForThisGarment as any[]).map(
             (gs: any, index: number) => ({
               id: `gs-${index}`, // Generate a temporary ID
               quantity: gs.quantity,

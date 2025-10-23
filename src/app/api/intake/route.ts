@@ -353,7 +353,7 @@ export async function POST(request: NextRequest) {
                 .from('garment_service')
                 .insert({
                   garment_id: (newGarment as any).id,
-                  service_id: newCustomService.id,
+                  service_id: (newCustomService as any).id,
                   quantity: service.qty || 1,
                   custom_price_cents: service.customPriceCents || null,
                   notes: service.notes || null,
