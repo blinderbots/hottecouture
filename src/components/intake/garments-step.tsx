@@ -312,7 +312,8 @@ export function GarmentsStep({
       }
 
       // Remove the deleted garment type from state directly
-      const deletedType = garmentTypes.find(t => t.id === deleteConfirmId);
+      // Check if deleted type was selected before removing from state
+      const wasSelected = currentGarment.garment_type_id === deleteConfirmId;
 
       setGarmentTypes(prevTypes =>
         prevTypes.filter(type => type.id !== deleteConfirmId)
@@ -330,7 +331,7 @@ export function GarmentsStep({
       });
 
       // Clear selection if deleted type was selected
-      if (currentGarment.garment_type_id === deleteConfirmId) {
+      if (wasSelected) {
         setCurrentGarment(prev => ({
           ...prev,
           type: '',
