@@ -106,8 +106,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all active categories
-    const { data: categories, error } = await supabase
-      .from('category')
+    const { data: categories, error } = await (supabase.from('category') as any)
       .select('*')
       .eq('is_active', true)
       .order('display_order', { ascending: true })
@@ -154,8 +153,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check current count of categories
-    const { count: categoryCount, error: countError } = await supabase
-      .from('category')
+    const { count: categoryCount, error: countError } = await (
+      supabase.from('category') as any
+    )
       .select('id', { count: 'exact', head: true })
       .eq('is_active', true);
 
@@ -186,8 +186,9 @@ export async function POST(request: NextRequest) {
     const icon = getIconForCategory(name.trim());
 
     // Check if key already exists
-    const { data: existing, error: checkError } = await supabase
-      .from('category')
+    const { data: existing, error: checkError } = await (
+      supabase.from('category') as any
+    )
       .select('id, key, name')
       .eq('key', key)
       .single();
@@ -212,8 +213,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if name already exists
-    const { data: existingName, error: nameCheckError } = await supabase
-      .from('category')
+    const { data: existingName, error: nameCheckError } = await (
+      supabase.from('category') as any
+    )
       .select('id, name')
       .eq('name', name.trim())
       .eq('is_active', true)
@@ -238,21 +240,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Get next display order
-    const { data: lastCategory } = await supabase
+    const { data: lastCategory } = (await supabase
       .from('category')
       .select('display_order')
       .eq('is_active', true)
       .order('display_order', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle()) as {
+      data: { display_order: number } | null;
+      error: null;
+    };
 
     const displayOrder = lastCategory?.display_order
       ? lastCategory.display_order + 1
       : 1;
 
     // Create the category
-    const { data: newCategory, error: createError } = await supabase
-      .from('category')
+    const { data: newCategory, error: createError } = await (
+      supabase.from('category') as any
+    )
       .insert({
         key,
         name: name.trim(),
@@ -312,8 +318,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if name already exists (excluding current category)
-    const { data: existing, error: checkError } = await supabase
-      .from('category')
+    const { data: existing, error: checkError } = await (
+      supabase.from('category') as any
+    )
       .select('id, name')
       .eq('name', name.trim())
       .eq('is_active', true)
@@ -342,8 +349,9 @@ export async function PUT(request: NextRequest) {
     const icon = getIconForCategory(name.trim());
 
     // Update the category
-    const { data: updatedCategory, error: updateError } = await supabase
-      .from('category')
+    const { data: updatedCategory, error: updateError } = await (
+      supabase.from('category') as any
+    )
       .update({
         name: name.trim(),
         icon,
@@ -402,8 +410,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get category info
-    const { data: category, error: fetchError } = await supabase
-      .from('category')
+    const { data: category, error: fetchError } = await (
+      supabase.from('category') as any
+    )
       .select('id, key, name')
       .eq('id', id)
       .single();
@@ -446,8 +455,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Soft delete (set is_active = false)
-    const { error: deleteError } = await supabase
-      .from('category')
+    const { error: deleteError } = await (supabase.from('category') as any)
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('id', id);
 

@@ -107,6 +107,7 @@ export type Database = {
           id: string;
           order_id: string;
           type: string;
+          garment_type_id: string | null;
           color: string | null;
           brand: string | null;
           notes: string | null;
@@ -118,6 +119,7 @@ export type Database = {
           id?: string;
           order_id: string;
           type: string;
+          garment_type_id?: string | null;
           color?: string | null;
           brand?: string | null;
           notes?: string | null;
@@ -129,6 +131,7 @@ export type Database = {
           id?: string;
           order_id?: string;
           type?: string;
+          garment_type_id?: string | null;
           color?: string | null;
           brand?: string | null;
           notes?: string | null;
@@ -139,22 +142,28 @@ export type Database = {
       };
       garment_service: {
         Row: {
+          id: string;
           garment_id: string;
-          service_id: string;
+          service_id: string | null;
+          custom_service_name: string | null;
           quantity: number;
           custom_price_cents: number | null;
           notes: string | null;
         };
         Insert: {
+          id?: string;
           garment_id: string;
-          service_id: string;
+          service_id?: string | null;
+          custom_service_name?: string | null;
           quantity?: number;
           custom_price_cents?: number | null;
           notes?: string | null;
         };
         Update: {
+          id?: string;
           garment_id?: string;
-          service_id?: string;
+          service_id?: string | null;
+          custom_service_name?: string | null;
           quantity?: number;
           custom_price_cents?: number | null;
           notes?: string | null;
@@ -276,6 +285,8 @@ export type Database = {
           category: string | null;
           unit: string | null;
           is_custom: boolean;
+          display_order: number;
+          is_active: boolean;
         };
         Insert: {
           id?: string;
@@ -285,6 +296,8 @@ export type Database = {
           category?: string | null;
           unit?: string | null;
           is_custom?: boolean;
+          display_order?: number;
+          is_active?: boolean;
         };
         Update: {
           id?: string;
@@ -294,6 +307,78 @@ export type Database = {
           category?: string | null;
           unit?: string | null;
           is_custom?: boolean;
+          display_order?: number;
+          is_active?: boolean;
+        };
+      };
+      category: {
+        Row: {
+          id: string;
+          key: string;
+          name: string;
+          icon: string | null;
+          display_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          name: string;
+          icon?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          key?: string;
+          name?: string;
+          icon?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      garment_type: {
+        Row: {
+          id: string;
+          code: string;
+          name: string;
+          category: string;
+          icon: string | null;
+          is_common: boolean;
+          is_active: boolean;
+          is_custom: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          name: string;
+          category: string;
+          icon?: string | null;
+          is_common?: boolean;
+          is_active?: boolean;
+          is_custom?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          name?: string;
+          category?: string;
+          icon?: string | null;
+          is_common?: boolean;
+          is_active?: boolean;
+          is_custom?: boolean;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       task: {

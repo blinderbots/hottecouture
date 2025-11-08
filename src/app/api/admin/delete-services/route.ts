@@ -19,8 +19,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     // First, find the services by name
-    const { data: services, error: findError } = await supabase
-      .from('service')
+    const { data: services, error: findError } = await (
+      supabase.from('service') as any
+    )
       .select('id, name, base_price_cents')
       .in('name', serviceNames);
 
@@ -44,15 +45,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check if any services are missing
-    const foundNames = services.map(s => s.name);
+    const foundNames = services.map((s: any) => s.name);
     const missingNames = serviceNames.filter(
       name => !foundNames.includes(name)
     );
 
     // Delete the services
-    const serviceIds = services.map(s => s.id);
-    const { data: deletedServices, error: deleteError } = await supabase
-      .from('service')
+    const serviceIds = services.map((s: any) => s.id);
+    const { data: deletedServices, error: deleteError } = await (
+      supabase.from('service') as any
+    )
       .delete()
       .in('id', serviceIds)
       .select('id, name, base_price_cents');

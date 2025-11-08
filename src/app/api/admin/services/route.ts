@@ -51,8 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all active services
-    const { data: services, error } = await supabase
-      .from('service')
+    const { data: services, error } = await (supabase.from('service') as any)
       .select('*')
       .eq('is_active', true)
       .order('category', { ascending: true })
@@ -116,8 +115,7 @@ export async function POST(request: NextRequest) {
     let codeExists = true;
     let attempts = 0;
     while (codeExists && attempts < 10) {
-      const { data: existing } = await supabase
-        .from('service')
+      const { data: existing } = await (supabase.from('service') as any)
         .select('id')
         .eq('code', code)
         .single();
@@ -136,8 +134,9 @@ export async function POST(request: NextRequest) {
 
     // Query all services with the same name to check for duplicates in the same category
     // Use case-insensitive category comparison
-    const { data: existingServices, error: nameCheckError } = await supabase
-      .from('service')
+    const { data: existingServices, error: nameCheckError } = await (
+      supabase.from('service') as any
+    )
       .select('id, name, category')
       .eq('name', name.trim())
       .eq('is_active', true);
@@ -145,7 +144,7 @@ export async function POST(request: NextRequest) {
     // Filter results to check if any service has the same category (case-insensitive)
     let duplicateFound = false;
     if (existingServices && existingServices.length > 0) {
-      duplicateFound = existingServices.some(service => {
+      duplicateFound = existingServices.some((service: any) => {
         const existingCategory = service.category
           ? service.category.toLowerCase()
           : null;
@@ -172,14 +171,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get next display order for this category
-    const { data: lastService } = await supabase
-      .from('service')
+    const { data: lastService } = (await (supabase.from('service') as any)
       .select('display_order')
       .eq('category', category || null)
       .eq('is_active', true)
       .order('display_order', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle()) as {
+      data: { display_order: number } | null;
+      error: null;
+    };
 
     const displayOrder = lastService?.display_order
       ? lastService.display_order + 1
@@ -187,8 +188,9 @@ export async function POST(request: NextRequest) {
 
     // Create the service
     // Normalize category to lowercase to ensure consistency (handle legacy 'Custom' vs 'custom')
-    const { data: newService, error: createError } = await supabase
-      .from('service')
+    const { data: newService, error: createError } = await (
+      supabase.from('service') as any
+    )
       .insert({
         code,
         name: name.trim(),
@@ -266,8 +268,9 @@ export async function PUT(request: NextRequest) {
 
     // Query all services with the same name to check for duplicates in the same category
     // Use case-insensitive category comparison
-    const { data: existingServices, error: checkError } = await supabase
-      .from('service')
+    const { data: existingServices, error: checkError } = await (
+      supabase.from('service') as any
+    )
       .select('id, name, category')
       .eq('name', name.trim())
       .eq('is_active', true)
@@ -276,7 +279,7 @@ export async function PUT(request: NextRequest) {
     // Filter results to check if any service has the same category (case-insensitive)
     let duplicateFound = false;
     if (existingServices && existingServices.length > 0) {
-      duplicateFound = existingServices.some(service => {
+      duplicateFound = existingServices.some((service: any) => {
         const existingCategory = service.category
           ? service.category.toLowerCase()
           : null;
@@ -311,8 +314,9 @@ export async function PUT(request: NextRequest) {
       unit: unit && unit.trim() ? unit.trim() : null,
     };
 
-    const { data: updatedService, error: updateError } = await supabase
-      .from('service')
+    const { data: updatedService, error: updateError } = await (
+      supabase.from('service') as any
+    )
       .update(updateData)
       .eq('id', id)
       .select()
@@ -364,8 +368,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get service info
-    const { data: service, error: fetchError } = await supabase
-      .from('service')
+    const { data: service, error: fetchError } = await (
+      supabase.from('service') as any
+    )
       .select('id, name')
       .eq('id', id)
       .single();
@@ -403,8 +408,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Soft delete (set is_active = false)
-    const { error: deleteError } = await supabase
-      .from('service')
+    const { error: deleteError } = await (supabase.from('service') as any)
       .update({ is_active: false })
       .eq('id', id);
 

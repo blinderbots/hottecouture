@@ -15,8 +15,9 @@ export async function POST(request: NextRequest) {
     }
 
     // First, find all services in the source category
-    const { data: services, error: findError } = await supabase
-      .from('service')
+    const { data: services, error: findError } = await (
+      supabase.from('service') as any
+    )
       .select('id, name, category')
       .eq('category', fromCategory);
 
@@ -41,9 +42,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Update all services to the new category
-    const serviceIds = services.map(s => s.id);
-    const { data: updatedServices, error: updateError } = await supabase
-      .from('service')
+    const serviceIds = services.map((s: any) => s.id);
+    const { data: updatedServices, error: updateError } = await (
+      supabase.from('service') as any
+    )
       .update({ category: toCategory })
       .in('id', serviceIds)
       .select('id, name, category');

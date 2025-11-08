@@ -17,7 +17,7 @@ interface GarmentType {
 
 interface Garment {
   type: string;
-  garment_type_id?: string;
+  garment_type_id?: string | null;
   color?: string;
   brand?: string;
   notes?: string;
@@ -49,6 +49,7 @@ export function GarmentsStep({
   const [loading, setLoading] = useState(true);
   const [currentGarment, setCurrentGarment] = useState<Partial<Garment>>({
     type: '',
+    garment_type_id: null,
     notes: '',
     labelCode: nanoid(8).toUpperCase(),
     services: [],
@@ -101,9 +102,11 @@ export function GarmentsStep({
 
     if (isDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () =>
+      return () => {
         document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
+    return undefined;
   }, [isDropdownOpen]);
 
   const addGarment = () => {
@@ -289,7 +292,7 @@ export function GarmentsStep({
         setCurrentGarment(prev => ({
           ...prev,
           type: '',
-          garment_type_id: undefined,
+          garment_type_id: null,
         }));
       }
 

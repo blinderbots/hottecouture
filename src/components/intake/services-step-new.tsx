@@ -148,7 +148,11 @@ export function ServicesStepNew({
     const isActiveTabVisible = filteredCategories.some(
       cat => cat.key === activeTab
     );
-    if (!isActiveTabVisible && filteredCategories.length > 0) {
+    if (
+      !isActiveTabVisible &&
+      filteredCategories.length > 0 &&
+      filteredCategories[0]
+    ) {
       setActiveTab(filteredCategories[0].key);
     }
   }, [filteredCategories, activeTab]);
@@ -172,9 +176,11 @@ export function ServicesStepNew({
 
     if (contextMenuId || serviceContextMenuId) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () =>
+      return () => {
         document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
+    return undefined;
   }, [contextMenuId, serviceContextMenuId]);
 
   useEffect(() => {
@@ -412,7 +418,7 @@ export function ServicesStepNew({
         const filtered = filteredCategories.filter(
           c => c.id !== deleteConfirmId
         );
-        if (filtered.length > 0) {
+        if (filtered.length > 0 && filtered[0]) {
           setActiveTab(filtered[0].key);
         }
       }

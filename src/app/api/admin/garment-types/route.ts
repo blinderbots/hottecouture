@@ -70,8 +70,9 @@ export async function POST(request: NextRequest) {
     // First check if is_custom column exists by trying a simple query
     let customCount = 0;
     try {
-      const { count, error: countError } = await supabase
-        .from('garment_type')
+      const { count, error: countError } = await (
+        supabase.from('garment_type') as any
+      )
         .select('id', { count: 'exact', head: true })
         .eq('is_custom', true)
         .eq('is_active', true);
@@ -129,8 +130,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if name already exists
-    const { data: existing, error: checkError } = await supabase
-      .from('garment_type')
+    const { data: existing, error: checkError } = await (
+      supabase.from('garment_type') as any
+    )
       .select('id, name')
       .eq('name', name.trim())
       .eq('is_active', true)
@@ -163,8 +165,9 @@ export async function POST(request: NextRequest) {
       .substring(0, 15)}_${Date.now().toString().slice(-6)}`;
 
     // Create the garment type
-    const { data: newType, error: createError } = await supabase
-      .from('garment_type')
+    const { data: newType, error: createError } = await (
+      supabase.from('garment_type') as any
+    )
       .insert({
         code,
         name: name.trim(),
@@ -229,8 +232,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if name already exists (excluding current type)
-    const { data: existing, error: checkError } = await supabase
-      .from('garment_type')
+    const { data: existing, error: checkError } = await (
+      supabase.from('garment_type') as any
+    )
       .select('id, name')
       .eq('name', name.trim())
       .eq('is_active', true)
@@ -269,8 +273,9 @@ export async function PUT(request: NextRequest) {
       updateData.icon = icon;
     }
 
-    const { data: updatedType, error: updateError } = await supabase
-      .from('garment_type')
+    const { data: updatedType, error: updateError } = await (
+      supabase.from('garment_type') as any
+    )
       .update(updateData)
       .eq('id', id)
       .select()
@@ -328,8 +333,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check if garment type exists
-    const { data: garmentType, error: fetchError } = await supabase
-      .from('garment_type')
+    const { data: garmentType, error: fetchError } = await (
+      supabase.from('garment_type') as any
+    )
       .select('id, name, is_custom')
       .eq('id', id)
       .single();
@@ -371,8 +377,7 @@ export async function DELETE(request: NextRequest) {
 
     // Soft delete (set is_active = false) instead of hard delete
     // This preserves data integrity and allows recovery if needed
-    const { error: deleteError } = await supabase
-      .from('garment_type')
+    const { error: deleteError } = await (supabase.from('garment_type') as any)
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('id', id);
 

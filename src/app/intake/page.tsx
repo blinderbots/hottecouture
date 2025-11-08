@@ -35,7 +35,7 @@ interface IntakeFormData {
   } | null;
   garments: Array<{
     type: string;
-    garment_type_id?: string;
+    garment_type_id?: string | null;
     color?: string;
     brand?: string;
     notes?: string;
