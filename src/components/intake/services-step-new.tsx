@@ -303,12 +303,28 @@ export function ServicesStepNew({
         return;
       }
 
-      // Reload categories
-      await loadCategories();
-
-      // Select the newly created category
+      // Add the new category to state directly
       if (result.category) {
+        setCategories(prevCategories => {
+          // Check if category already exists (shouldn't, but safety check)
+          const exists = prevCategories.some(
+            cat => cat.id === result.category.id
+          );
+          if (exists) {
+            return prevCategories.map(cat =>
+              cat.id === result.category.id ? result.category : cat
+            );
+          }
+          return [...prevCategories, result.category].sort((a, b) =>
+            a.name.localeCompare(b.name)
+          );
+        });
+
+        // Select the newly created category
         setActiveTab(result.category.key);
+      } else {
+        // Fallback: reload if response doesn't include category
+        await loadCategories();
       }
 
       // Reset form
@@ -349,12 +365,21 @@ export function ServicesStepNew({
         return;
       }
 
-      // Reload categories
-      await loadCategories();
+      // Update state directly with the updated category
+      if (result.category) {
+        setCategories(prevCategories =>
+          prevCategories.map(cat =>
+            cat.id === editingCategoryId ? result.category : cat
+          )
+        );
 
-      // Update active tab if it was the edited category
-      if (result.category && activeTab === result.category.key) {
-        setActiveTab(result.category.key);
+        // Update active tab if it was the edited category
+        if (activeTab === result.category.key) {
+          setActiveTab(result.category.key);
+        }
+      } else {
+        // Fallback: reload if response doesn't include category
+        await loadCategories();
       }
 
       setEditingCategoryId(null);
@@ -410,16 +435,29 @@ export function ServicesStepNew({
         return;
       }
 
-      // Reload categories
-      await loadCategories();
+      // Remove the deleted category from state directly
+      const deletedCategory = categories.find(c => c.id === deleteConfirmId);
+
+      setCategories(prevCategories =>
+        prevCategories.filter(cat => cat.id !== deleteConfirmId)
+      );
 
       // Clear selection if deleted category was selected
-      if (categories.find(c => c.id === deleteConfirmId)?.key === activeTab) {
-        const filtered = filteredCategories.filter(
+      if (deletedCategory?.key === activeTab) {
+        // Calculate filtered categories after deletion
+        const remainingCategories = categories.filter(
           c => c.id !== deleteConfirmId
         );
-        if (filtered.length > 0 && filtered[0]) {
-          setActiveTab(filtered[0].key);
+        const filtered =
+          orderType === 'alteration'
+            ? remainingCategories.filter(
+                cat => cat.key !== 'curtains' && cat.key !== 'custom'
+              )
+            : remainingCategories;
+
+        const sorted = filtered.sort((a, b) => a.name.localeCompare(b.name));
+        if (sorted.length > 0 && sorted[0]) {
+          setActiveTab(sorted[0].key);
         }
       }
 
