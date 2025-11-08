@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get next display order for this category
-    const { data: lastService, error: orderError } = await supabase
+    const { data: lastService } = await supabase
       .from('service')
       .select('display_order')
       .eq('category', category || null)

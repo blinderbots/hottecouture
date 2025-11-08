@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get next display order
-    const { data: lastCategory, error: orderError } = await supabase
+    const { data: lastCategory } = await supabase
       .from('category')
       .select('display_order')
       .eq('is_active', true)

@@ -12,7 +12,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
  *
  * This cannot be undone!
  */
-export async function DELETE(request: NextRequest) {
+export async function DELETE(_request: NextRequest) {
   try {
     const supabase = await createServiceRoleClient();
 

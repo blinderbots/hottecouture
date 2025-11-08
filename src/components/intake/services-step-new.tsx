@@ -38,13 +38,6 @@ interface ServicesStepProps {
   orderType?: 'alteration' | 'custom'; // Order type from step 1
 }
 
-type ServiceCategory =
-  | 'alterations'
-  | 'accessories'
-  | 'fabrics'
-  | 'curtains'
-  | 'custom';
-
 export function ServicesStepNew({
   data,
   onUpdate,
